@@ -1,0 +1,6 @@
+{
+  "name": "Clickit",
+  "description": "Clickit – Home Affairs: hyperlocal marketplace for laundry, tailoring, and footwear repair with Digital Dukaan storefronts, Smart Batch pickup/return, and multi-role workflows.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

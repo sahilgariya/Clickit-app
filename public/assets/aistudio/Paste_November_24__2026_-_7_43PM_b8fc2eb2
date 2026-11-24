@@ -1,0 +1,1960 @@
+CLICKIT
+
+HOME AFFAIRS
+
+COMPLETE APPLICATION SPECIFICATION
+
+Five connected components • Screen-by-screen features • User journeys • Permissions • API behaviour • Security
+
+Customer App | Worker App | Delivery Partner App | Admin Website | API / Backend
+
+Brand palette: #181A2F  #242E49  #37415C  #FDA481  #B4182D  #54162B
+
+
+CLICKIT — Detailed application specification | Working document | 24 November 2026  |  Page 
+
+CLICKIT | COMPLETE APPLICATION SPECIFICATION
+
+How to use this specification
+
+This document expands the Clickit project into detailed product requirements for all five connected components. It is intended for product planning, UI/UX design, backend implementation, database design, QA and operational preparation.
+
+Status labels  CONFIRMED = directly discussed in the Clickit project. PROPOSED = recommended product behaviour to validate. FUTURE = useful expansion that should not block the first pilot.
+
+Product definition
+
+Clickit – Home Affairs is a hyperlocal marketplace that connects customers with nearby independent workers and local shops for services such as laundry, tailoring and footwear repair. Workers manage their own digital storefronts, service catalogue, prices and availability. Clickit coordinates discovery, booking, optional pickup and return, payments, support and trust.
+
+Core principle
+
+Product interpretation
+
+Local service marketplace
+
+Clickit helps customers discover and book nearby service providers; it is not a warehouse or grocery dark-store model.
+
+Worker autonomy
+
+Workers control their own catalogue, working hours, capacity and service prices within platform rules.
+
+Choice of fulfilment
+
+A customer may visit the shop, use worker-managed delivery or request Clickit-managed pickup/return where enabled.
+
+Smart Batch
+
+Separate customer orders can share one scheduled route; their booking records and physical parcels remain separate.
+
+One connected platform
+
+Four user-facing clients share one central API/backend and one governed data model.
+
+System map
+
+Component
+
+Primary users
+
+Main responsibility
+
+Suggested technology
+
+Customer mobile app
+
+Customers
+
+Discover providers, book services, schedule collection, pay, track and get support.
+
+Flutter / Dart
+
+Worker mobile app
+
+Workers and shop owners
+
+Manage Digital Dukaan, services, prices, availability, bookings, work and earnings.
+
+Flutter / Dart
+
+Delivery Partner mobile app
+
+Delivery partners
+
+Accept tasks, follow routes, verify pickup/drop, maintain parcel custody and view earnings.
+
+Flutter / Dart
+
+Admin website
+
+Operations, support, finance, super-admin
+
+Manage marketplace, users, bookings, batches, delivery, payments, disputes and reports.
+
+React / Next.js
+
+API / Backend
+
+All clients and integrations
+
+Central authentication, permissions, business rules, database access, dispatch, payment and notifications.
+
+Python / FastAPI + PostgreSQL
+
+Important architecture clarification  The API/backend is not a fifth user-facing app. It is the secure server layer used by the three mobile apps and the admin website. Users must never connect directly to PostgreSQL.
+
+1. Shared platform rules
+
+1.1 Account roles
+
+Role
+
+Allowed scope (high level)
+
+Customer
+
+Own profile, addresses, bookings, payments, reviews, support tickets and tracking for own active orders.
+
+Worker
+
+Own shop/profile, own services/prices/availability, bookings assigned to that worker, work progress and own earnings.
+
+Delivery partner
+
+Own profile/availability, tasks offered or assigned to that partner, necessary pickup/drop details and own earnings.
+
+Support agent
+
+Assigned support cases and minimum customer/order data required to resolve them.
+
+Operations admin
+
+Marketplace operations, dispatch, booking intervention and worker/partner operational status.
+
+Finance admin
+
+Payment reconciliation, refunds and payout records; no unnecessary access to identity evidence.
+
+Super admin
+
+High-privilege configuration and access administration with MFA and full audit logging.
+
+1.2 Shared booking lifecycle
+
+State
+
+Meaning
+
+Who can trigger (subject to rules)
+
+draft
+
+Customer has not submitted the booking.
+
+Customer
+
+requested
+
+Booking submitted and waiting for worker response.
+
+Backend
+
+accepted
+
+Worker accepted the request and service scope.
+
+Worker / backend
+
+quote_pending
+
+Worker/customer must confirm final price or scope.
+
+Worker / customer
+
+confirmed
+
+Service, price and fulfilment details are confirmed.
+
+Backend
+
+pickup_scheduled
+
+A pickup task and time window exist.
+
+Backend / operations
+
+picked_up
+
+Pickup proof and custody event recorded.
+
+Assigned delivery partner
+
+received_by_worker
+
+Worker confirms parcel/item receipt.
+
+Worker
+
+in_progress
+
+Service work started.
+
+Worker
+
+ready
+
+Work completed and ready for collection/return.
+
+Worker
+
+return_scheduled
+
+Return task scheduled.
+
+Backend / operations
+
+out_for_delivery
+
+Return parcel is with delivery partner.
+
+Assigned delivery partner
+
+delivered
+
+Customer receipt verified.
+
+Assigned delivery partner / backend
+
+completed
+
+All required service and fulfilment conditions are satisfied.
+
+Backend
+
+cancelled / disputed / exception
+
+Terminal or intervention state with reason and audit trail.
+
+Authorized actor / backend
+
+1.3 Global interface and accessibility rules
+
+Use the Clickit palette consistently: primary #181A2F, secondary #242E49, slate #37415C, peach #FDA481, red #B4182D and burgundy #54162B.
+
+Use red for destructive actions, urgent failures or important warnings—not for ordinary navigation.
+
+Every data-loading screen needs loading, empty, error and retry states.
+
+Every form needs required-field indication, inline validation and a clear submit result.
+
+Confirm destructive actions such as cancel, delete, reject or refund before committing.
+
+Show currency as INR (₹) and clearly identify whether a price is estimated, worker-confirmed or final.
+
+Do not hide delivery charges, service charges, taxes or discounts inside an unexplained total.
+
+Support accessible text sizes, readable contrast, screen-reader labels and touch targets.
+
+Use local date/time consistently and display time windows with start and end times.
+
+2. CUSTOMER MOBILE APP — complete specification
+
+Purpose: make local services easy to discover, compare, book and receive. The customer app should reduce uncertainty about who will do the work, what it costs, when collection happens and how the order is progressing.
+
+2.1 Navigation structure
+
+Primary navigation
+
+Contains
+
+Home
+
+Location, search, categories, nearby workers, active booking summary and promotions if approved.
+
+Explore
+
+Category list, service results, filters, map/list view and worker profiles.
+
+Bookings
+
+Current, upcoming, completed and cancelled bookings.
+
+Activity / Notifications
+
+Booking events, pickup reminders, worker responses, payment and support updates.
+
+Profile
+
+Personal details, saved addresses, preferences, help, policies and account controls.
+
+2.2 Screen-by-screen requirements
+
+Screen / module
+
+Detailed behaviour
+
+C01 — Splash / app launch
+
+Display Clickit identity and initialize app configuration, session and notification registration. Route signed-in users to Home; new users to onboarding. Do not display private data before session validation.
+
+C02 — Welcome / onboarding
+
+Explain Clickit's local-services value and the initial categories. Offer sign-in/registration. Ask permissions contextually, not all at once.
+
+C03 — Phone number entry
+
+Collect phone number with country code. Validate format, show terms/privacy links and request OTP. Rate-limit repeated requests.
+
+C04 — OTP verification
+
+Accept OTP, show expiry/resend countdown and attempt limits. Never reveal whether another phone number owns an account.
+
+C05 — Basic profile
+
+Collect name and optional email/profile photo if needed. Explain why required fields are needed. Allow later editing.
+
+C06 — Location permission
+
+Explain that location helps find nearby services. Offer allow, choose location manually or skip until discovery requires it.
+
+C07 — Address selection
+
+Search address, map pin, current location or manual entry. Collect house/building, street, landmark, locality, city, postal code and delivery instructions. Save a labelled address.
+
+C08 — Home dashboard
+
+Show selected address, search bar, service categories, nearby providers, popular services, active order card and support entry. Do not show empty promotional placeholders.
+
+C09 — Search
+
+Search services, workers and shop names. Support spelling tolerance and recent searches. Return useful empty state with category suggestions.
+
+C10 — Category listing
+
+Show category description, available services and nearby providers. Filter by distance, rating, price range, open/available status and fulfilment option.
+
+C11 — Map/list results
+
+Show provider cards with business name, service match, distance/ETA where reliable, rating count, indicative price and open status. Map is supplementary; list must remain usable.
+
+C12 — Worker/shop profile
+
+Show verified status, shop name, photos, description, address/service area, hours, services, prices, estimated turnaround, fulfilment options, ratings and policies.
+
+C13 — Service details
+
+Explain what is included/excluded, pricing unit (per cloth, per kg, per item, per alteration, etc.), minimum quantity, expected turnaround and whether final quote may change.
+
+C14 — Booking builder
+
+Select service, quantity/items/weight, item notes, optional photos, fulfilment method, address and requested time. Validate service-specific inputs.
+
+C15 — Fulfilment choice
+
+Offer shop drop-off, worker-managed pickup/return or Clickit pickup/return only where the provider supports it. Show charges and service area.
+
+C16 — Pickup slot selection
+
+Show available windows, capacity and whether a shared batch slot is available. Clearly label a window as estimated or confirmed. Customer must approve a changed slot.
+
+C17 — Booking review
+
+Summarize provider, service, quantity, address, slot, fulfilment, item notes, estimated/confirmed price, delivery fee, tax and total. Require explicit confirmation.
+
+C18 — Booking submitted
+
+Show booking ID and status. Explain that worker confirmation may be pending. Prevent duplicate submission with idempotency.
+
+C19 — Worker quote / clarification
+
+Show revised scope, item count or price with reason. Customer can accept, ask a question or decline/cancel under policy.
+
+C20 — Payment
+
+Show payment method, payable amount, provider checkout and payment status. Never collect/store raw card credentials. Support retry without duplicate charge.
+
+C21 — Booking detail
+
+Show status timeline, provider, service, price snapshot, address, item list, scheduled windows, cancellation eligibility and support action.
+
+C22 — Pickup tracking
+
+Show assigned partner first name/limited identifier, vehicle details only if needed, ETA/window and task status. Show live location only during active task and with clear disclosure.
+
+C23 — Item handover confirmation
+
+Show OTP or other approved handover method, item count and condition acknowledgement. Never ask customer to expose OTP to an unverified person.
+
+C24 — In-service progress
+
+Show worker-confirmed progress, revised completion estimate and any approved quote changes.
+
+C25 — Return tracking
+
+Show return task status, partner ETA/window and delivery verification instructions.
+
+C26 — Delivery confirmation
+
+Ask customer to confirm receipt or report not received/damaged. Provide a clear issue route if OTP fails.
+
+C27 — Booking history
+
+Filter by active/completed/cancelled; open past receipts and booking details.
+
+C28 — Rating and review
+
+Collect star rating and optional structured feedback. Prevent review abuse and allow report/moderation.
+
+C29 — Support centre
+
+FAQs, booking-specific issue categories, ticket creation, attachments and ticket status.
+
+C30 — Notifications
+
+List alerts with read/unread state and deep links to relevant booking.
+
+C31 — Profile and preferences
+
+Edit name/email, notification preferences, saved addresses, language if supported and account controls.
+
+C32 — Privacy and account controls
+
+Explain data use, request data access/deletion where applicable, logout and revoke sessions.
+
+2.3 Customer booking journey
+
+Customer opens Home and confirms the correct service address.
+
+Customer selects Laundry, Tailoring or Footwear Repair, then chooses a service.
+
+Customer compares local providers using service fit, price, availability, distance and ratings.
+
+Customer opens a provider profile and checks the provider's fulfilment options.
+
+Customer builds a booking with quantity/weight/item notes and chooses a slot.
+
+If a shared pickup route is available, customer sees the pickup window and chooses it voluntarily.
+
+Customer reviews the price breakdown and submits the booking.
+
+Worker accepts or requests clarification; customer confirms any revised quote.
+
+Customer completes payment according to the configured payment policy.
+
+Customer follows pickup, service and return milestones; customer can raise a support case at any point.
+
+After successful receipt, booking completes and customer may rate the service.
+
+2.4 Customer-specific business rules
+
+Never confirm a worker, price or slot before the backend has reserved/confirmed it.
+
+Show the price unit next to every price. ₹10 per cloth is not the same as ₹10 per kg or per order.
+
+Show the distinction between estimated price and final confirmed price.
+
+Require approval before charging for a changed scope or additional item.
+
+Do not automatically place a customer into a shared batch if the slot or fee changes from what they accepted.
+
+Do not show another customer's name, address, order ID or parcel details in batch tracking.
+
+Allow a customer to contact support without needing to understand internal batch or dispatch identifiers.
+
+2.5 Customer notifications
+
+Event
+
+Suggested message content
+
+Booking received
+
+Booking ID, provider and awaiting-confirmation status.
+
+Worker accepted
+
+Provider accepted; confirmed service and next step.
+
+Quote changed
+
+Reason, new price and accept/decline action.
+
+Pickup reminder
+
+Date, window, address and preparation instructions.
+
+Partner assigned
+
+Pickup/return partner assigned; limited identity and ETA if available.
+
+Pickup completed
+
+Items collected; show item count and next step.
+
+Worker received items
+
+Provider confirmed receipt.
+
+Work ready
+
+Service completed; return or shop collection details.
+
+Out for delivery
+
+Return is on the way and estimated window.
+
+Delivered
+
+Receipt confirmation and support link.
+
+Payment/refund
+
+Amount, status and transaction reference.
+
+Support update
+
+Ticket status and response.
+
+3. WORKER MOBILE APP — complete specification
+
+Purpose: give local professionals and small shops control over their digital storefront, service catalogue, availability, bookings, fulfilment and earnings.
+
+3.1 Navigation structure
+
+Primary navigation
+
+Contains
+
+Dashboard
+
+Today summary, pending requests, active jobs, upcoming pickups and alerts.
+
+Bookings / Jobs
+
+New requests, accepted, in progress, ready, completed and cancelled.
+
+My Dukaan
+
+Shop profile, photos, service catalogue, prices, hours and service area.
+
+Earnings
+
+Job-wise earnings, platform/delivery deductions, payout status and statements.
+
+Profile / Support
+
+Verification, account settings, help and issue reporting.
+
+3.2 Screen-by-screen requirements
+
+Screen / module
+
+Detailed behaviour
+
+W01 — Welcome / sign-in
+
+Phone OTP login, terms and role-specific entry. Prevent one account from silently switching into another role without authorized profile/role state.
+
+W02 — Worker registration
+
+Collect person/business name, contact details, business type, service categories and operating locality.
+
+W03 — Verification submission
+
+Collect only required documents and details. Explain purpose, access and retention; use private upload and status tracking.
+
+W04 — Verification status
+
+Show draft/submitted/under review/approved/rejected, missing requirements and appeal/contact path.
+
+W05 — Shop profile setup
+
+Business name, description, profile image, cover/gallery photos, address, map pin, service area and customer-facing contact policy.
+
+W06 — Digital Dukaan preview
+
+Preview how customers see the shop. Show incomplete profile prompts and publish/unpublish status.
+
+W07 — Service catalogue
+
+List services by category, active/inactive state, price unit, price and estimated turnaround.
+
+W08 — Add service
+
+Choose category/service template or custom service if allowed; add description, inclusions/exclusions, pricing unit, base price, minimum quantity and turnaround.
+
+W09 — Edit price
+
+Change future price with effective time. Existing confirmed bookings retain their booking-time price snapshot.
+
+W10 — Service availability
+
+Toggle whether a service is offered; prevent deactivation from silently deleting accepted bookings.
+
+W11 — Working hours
+
+Set weekly hours, breaks, holidays, temporary closure and exceptional dates.
+
+W12 — Capacity settings
+
+Set daily job/item capacity, estimated workload and maximum pickup intake. Capacity should prevent overbooking.
+
+W13 — Fulfilment settings
+
+Choose shop drop-off, worker-managed delivery and/or Clickit-managed pickup/return if supported by locality and operations.
+
+W14 — Service area
+
+Set service radius/area and eligible H3 coverage. Confirm the displayed coverage using actual addresses, not only hex boundaries.
+
+W15 — Dashboard
+
+Show pending requests, accepted jobs, overdue work, items awaiting pickup/return, today's capacity and earnings summary.
+
+W16 — New booking request
+
+Show customer-approved scope, item details, requested slot, fulfilment, expected workload and quote status. Accept/reject with reason.
+
+W17 — Booking acceptance
+
+Confirm service scope, expected completion and price. Trigger customer notification only after backend confirmation.
+
+W18 — Clarification / quote
+
+Request missing information or send a revised quote with line-item reason; customer approval required before final charge.
+
+W19 — Booking detail
+
+Show booking ID, item list, customer instructions, contact policy, price snapshot, service timeline and delivery tasks relevant to worker.
+
+W20 — Receive items
+
+Confirm physical count, parcel ID/seal, visible condition and discrepancies. Record handover from delivery partner or customer.
+
+W21 — Start work
+
+Move accepted/received job to in progress; capture expected completion estimate.
+
+W22 — Update progress
+
+Use allowed milestones such as sorting, washing, ironing, stitching, repair or quality check depending on service category.
+
+W23 — Add-on / price adjustment
+
+Request customer approval for extra work, missing item, material or changed scope. Preserve original quote and adjustment history.
+
+W24 — Mark ready
+
+Confirm work is complete, final item count and parcel packaging. Trigger return planning or shop collection.
+
+W25 — Handover for return
+
+Verify assigned partner/task, parcel label, seal and count; record custody handoff.
+
+W26 — Job completion
+
+See delivered/collected confirmation and completed job record.
+
+W27 — Earnings summary
+
+Show gross customer amount, worker share, platform/delivery components, adjustments, taxes/withholding if applicable and payout state.
+
+W28 — Job-wise earnings
+
+Drill into each completed booking and its immutable financial breakdown.
+
+W29 — Payout history
+
+Show payout date, amount, provider/reference and failed/pending status.
+
+W30 — Ratings and feedback
+
+See review summaries and individual permitted feedback; respond where enabled.
+
+W31 — Notifications
+
+New request, acceptance, pickup arrival, customer quote response, job deadline, return collection and payout updates.
+
+W32 — Help and disputes
+
+Report customer issue, item mismatch/damage, partner handover issue, payment discrepancy or account concern.
+
+W33 — Account settings
+
+Edit permitted profile data, manage sessions, notification settings and account status.
+
+3.3 Worker operating journey
+
+Worker registers and submits verification information.
+
+After approval, worker creates the Digital Dukaan and defines service area and operating hours.
+
+Worker adds services, price units, prices, turnaround estimates and capacity.
+
+Customer discovers the shop and submits a request.
+
+Worker reviews details and accepts, rejects or asks for clarification.
+
+Worker confirms price and expected completion; customer accepts revised quote if applicable.
+
+Worker receives items and records count, condition and parcel handoff.
+
+Worker performs the service and updates milestones.
+
+Worker marks the order ready and hands the sealed/labelled parcel to the return partner or customer.
+
+After delivery/collection is confirmed, earnings are posted according to settlement policy.
+
+3.4 Worker controls and guardrails
+
+Worker can change future prices but cannot rewrite historical confirmed price snapshots.
+
+Worker cannot view other workers' bookings or customer records.
+
+Worker cannot mark a parcel as received without a custody/receipt event.
+
+Worker must flag count or condition mismatch at handover rather than silently editing the order.
+
+Worker can pause new bookings while existing accepted jobs remain visible and actionable.
+
+Worker verification documents must not be visible to customers or delivery partners.
+
+Worker payout totals must be traceable to booking-level financial records.
+
+4. DELIVERY PARTNER MOBILE APP — complete specification
+
+Purpose: coordinate pickup and return movement while preserving parcel identity, customer privacy, reliable handovers and efficient routes.
+
+4.1 Navigation structure
+
+Primary navigation
+
+Contains
+
+Home / Availability
+
+Online status, current shift, service area and capacity.
+
+Task Offers
+
+Available individual tasks or grouped batch offers.
+
+My Route
+
+Accepted tasks, stop sequence, navigation and stop status.
+
+Earnings
+
+Completed tasks, payout summary and adjustments.
+
+Profile / Help
+
+Vehicle, verification, safety, support and settings.
+
+4.2 Screen-by-screen requirements
+
+Screen / module
+
+Detailed behaviour
+
+D01 — Sign-in
+
+Phone OTP and partner role validation.
+
+D02 — Partner onboarding
+
+Personal details, vehicle type, operating area and required declarations.
+
+D03 — Verification
+
+Submit required identity/vehicle evidence privately; show review state.
+
+D04 — Vehicle and capacity
+
+Set vehicle type and operational capacity; use weight, parcel volume and count limits where applicable.
+
+D05 — Availability
+
+Go online/offline, choose shift and service area. Do not accept new work when offline.
+
+D06 — Home dashboard
+
+Show availability, current tasks, daily task count, earnings and urgent alerts.
+
+D07 — Task offer detail
+
+Show task type, pickup/drop areas, approximate route, stop count, parcel count, estimated weight/volume, time window and payout.
+
+D08 — Accept/reject offer
+
+Accept within offer expiry; reject with optional reason. Backend must prevent double assignment.
+
+D09 — Batch route overview
+
+Show ordered stops, estimated route duration and capacity. Each stop remains linked to its own booking/task.
+
+D10 — Stop detail
+
+Reveal only the address and contact/entry instructions needed for the current assigned stop.
+
+D11 — Navigation handoff
+
+Open licensed map navigation; app remains source of truth for task status.
+
+D12 — Arrived at pickup
+
+Record arrival timestamp and allow customer contact through masked/in-app channel.
+
+D13 — Customer verification
+
+Verify OTP or approved pickup code before taking custody.
+
+D14 — Parcel scan and count
+
+Scan parcel/booking label; confirm parcel count, seal ID and visible condition. Flag discrepancy.
+
+D15 — Pickup proof
+
+Record pickup event, time, partner identity and permitted evidence; confirm custody transfer.
+
+D16 — Worker/shop handover
+
+Verify worker/shop identity and scan parcel; record count and custody transfer.
+
+D17 — Return collection
+
+Collect completed parcel from worker, verify seal/count and record handover.
+
+D18 — Customer drop
+
+Navigate to customer; verify delivery OTP or approved proof before marking delivered.
+
+D19 — Failed attempt
+
+Choose controlled reason: customer unavailable, address issue, unsafe access, parcel mismatch, partner issue or other approved reason.
+
+D20 — Batch exception
+
+Report stop skipped, capacity issue, route delay, vehicle issue or parcel discrepancy; operations may split/reassign route.
+
+D21 — Task history
+
+Review assigned/completed/failed tasks and event history.
+
+D22 — Earnings
+
+Show task payout, batch incentive if configured, adjustments and payout state.
+
+D23 — Notifications
+
+New offer, assignment, route change, customer update, task cancellation and payout event.
+
+D24 — Safety / support
+
+Emergency contact, incident report, support ticket and lost-item escalation.
+
+D25 — Profile and settings
+
+Edit allowed details, vehicle data, service area, notification settings and logout.
+
+4.3 Delivery partner rules
+
+Partner sees only active assigned task information and the minimum necessary personal data.
+
+Partner location tracking is active only for a disclosed operational purpose and limited to active work/online periods.
+
+Partner cannot change service price, booking item count or worker earnings.
+
+Partner cannot mark pickup/drop complete without required verification and custody event.
+
+Partner may reject unsafe or impossible work without penalty rules being hidden.
+
+Batch offers must display total capacity requirements and stop count before acceptance.
+
+Reassignment preserves the old assignment record and records why it ended.
+
+4.4 Smart Batch behaviour in partner app
+
+A batch is a route plan containing multiple separate stops. It is not one combined customer order. The partner sees a route summary and then each stop independently.
+
+Batch action
+
+Required behaviour
+
+Offer
+
+Show time window, route estimate, total parcel count/weight estimate, capacity and payout.
+
+Accept
+
+Reserve the batch assignment atomically; reject duplicate acceptance.
+
+Start route
+
+Record start time and show stop order.
+
+At each stop
+
+Verify correct booking/parcel, record proof and mark only that stop complete.
+
+Partial failure
+
+Skip or flag the affected stop; other completed stops remain completed.
+
+Re-route
+
+Operations may reorder remaining stops or reassign remaining work with an audit record.
+
+Close batch
+
+Close only when all stops are completed or explicitly resolved as exceptions.
+
+5. ADMIN WEBSITE — complete specification
+
+Purpose: provide controlled operational oversight. Admin is not a general-purpose database editor. Every privileged action must have permission checks, reason capture and an audit trail.
+
+5.1 Admin roles and permissions
+
+Admin role
+
+Typical permissions
+
+Support agent
+
+View assigned tickets and limited booking/customer details; add notes; communicate; escalate.
+
+Worker verification reviewer
+
+Review worker/partner submissions and approve/reject with reason.
+
+Dispatch operator
+
+Create/review batches, assign/reassign partners, resolve delivery exceptions.
+
+Operations manager
+
+Manage serviceability, operational settings and booking interventions.
+
+Finance operator
+
+View payment reconciliation, refunds and payouts; execute only approved financial actions.
+
+Analyst / read-only
+
+Access aggregated metrics and approved exports; no mutation.
+
+Super admin
+
+Manage roles, high-risk configuration and emergency controls; MFA and audit required.
+
+5.2 Admin navigation
+
+Menu
+
+Submodules
+
+Overview
+
+Operational dashboard, live workload, alerts and KPIs.
+
+Customers
+
+Search, profile, addresses with restricted access, booking history, account status.
+
+Workers
+
+Applications, verification, storefronts, service catalogues, availability and performance.
+
+Delivery partners
+
+Verification, vehicle/capacity, availability, assignments and performance.
+
+Marketplace
+
+Categories, service templates, service areas, policy configuration and provider listings.
+
+Bookings
+
+Search, booking detail, status timeline, quotes, cancellation and dispute controls.
+
+Dispatch & batches
+
+Pickup/return task queue, batch candidates, route review, assignment, exceptions and stop timeline.
+
+Payments & payouts
+
+Payment attempts, provider events, refunds, worker/partner payouts and reconciliation.
+
+Support & disputes
+
+Tickets, evidence, internal notes, escalation and resolution.
+
+Reviews & moderation
+
+Review reports, abuse checks, moderation decisions and appeals.
+
+Analytics
+
+Marketplace, delivery, batch, financial, quality and retention reports.
+
+Configuration
+
+Pickup slots, capacity policies, pricing configuration, notifications, serviceability and feature flags.
+
+Security & audit
+
+Admin users, roles, login/session activity, audit events and security alerts.
+
+5.3 Admin screen requirements
+
+Screen / module
+
+Detailed behaviour
+
+A01 — Admin sign-in
+
+Strong authentication, MFA for privileged users, session timeout and suspicious-login monitoring.
+
+A02 — Overview dashboard
+
+Show bookings by state, pending worker approvals, active deliveries, late tasks, open disputes, payment exceptions and locality filters.
+
+A03 — Customer search
+
+Search by customer ID/phone with restricted visibility; require reason for sensitive data access where appropriate.
+
+A04 — Customer detail
+
+Show profile status, bookings, tickets and limited address information. Mask sensitive fields by default.
+
+A05 — Worker application queue
+
+Filter submitted/pending/rejected applications; review documents only for authorized reviewer.
+
+A06 — Worker review
+
+Approve/reject/request more information with reason and audit event.
+
+A07 — Worker detail
+
+View storefront, categories, services, service area, availability, booking performance and complaint history.
+
+A08 — Partner management
+
+Review verification, vehicle/capacity, availability, assignment history and incident status.
+
+A09 — Category/service management
+
+Create or disable categories and service templates; preserve references used by historical bookings.
+
+A10 — Service area management
+
+Configure pilot locality, service boundaries, H3 resolution/settings and excluded zones.
+
+A11 — Booking search
+
+Filter by ID, customer, worker, category, status, date and fulfilment method.
+
+A12 — Booking detail
+
+Show immutable quote, item snapshots, event timeline, delivery tasks, payment state, dispute and support history.
+
+A13 — Booking intervention
+
+Cancel, reopen or correct only permitted fields with reason and permission; do not overwrite audit history.
+
+A14 — Pickup queue
+
+View due pickups, unassigned tasks, time windows, locality and exception flags.
+
+A15 — Batch candidate review
+
+Show compatible candidate tasks, H3 proximity, road ETA, slot overlap, worker destination and capacity estimates.
+
+A16 — Batch creation
+
+Create batch, choose route sequence, enforce capacity and confirm customer slot promises.
+
+A17 — Dispatch board
+
+Assign partner, monitor acceptance, reassign, split batch and view active route exceptions.
+
+A18 — Delivery event detail
+
+Review stop events, timestamps, actor, parcel ID, proof reference and discrepancy reports.
+
+A19 — Payments dashboard
+
+View pending/success/failed payments, provider event status, settlement and reconciliation mismatches.
+
+A20 — Refund workflow
+
+Check eligibility, require reason and approval threshold, initiate provider refund and track result.
+
+A21 — Payout dashboard
+
+View worker/partner payable, payout batches, failures and reconciliation.
+
+A22 — Support queue
+
+Assign tickets, set priority, use controlled response templates and track SLA.
+
+A23 — Dispute case
+
+Review customer/worker/partner statements, custody timeline, evidence and resolution decision.
+
+A24 — Review moderation
+
+Hide/remove only under published policy; record moderation reason and appeal state.
+
+A25 — Analytics
+
+Filter date, locality, category and fulfilment; export only approved fields.
+
+A26 — Configuration
+
+Manage slots, fees, capacity limits, cancellation rules and notification templates with versioning.
+
+A27 — Admin user management
+
+Invite/deactivate admins, assign least-privilege roles and enforce MFA.
+
+A28 — Audit log
+
+Search actor, action, entity, time, request ID and reason; logs are append-only to normal admins.
+
+A29 — Incident centre
+
+View security, operational, payment and delivery alerts with owner and resolution status.
+
+5.4 Admin dashboard KPIs
+
+Area
+
+Recommended measures
+
+Marketplace
+
+New bookings, accepted bookings, worker response time, conversion and repeat customer rate.
+
+Operations
+
+Open jobs, overdue jobs, cancellation rate, unresolved exceptions and support backlog.
+
+Delivery
+
+Pickup success, return success, on-time rate, partner acceptance and cost per completed task.
+
+Batching
+
+Batch fill rate, parcels per route, route km per parcel, stops, average detour, delay and split rate.
+
+Finance
+
+Gross booking value, customer charges, worker payable, partner payable, platform amount, refunds and reconciliation variance.
+
+Trust
+
+Complaints per 100 bookings, missing/damaged parcel claims, review reports and resolution time.
+
+5.5 Admin safeguards
+
+Require a reason for worker suspension, booking intervention, refund, payout adjustment and review moderation.
+
+Use dual approval for high-value refunds, manual payouts and sensitive account actions.
+
+Mask phone numbers, identity data and exact addresses unless the task requires access.
+
+Keep exports disabled by default or restrict them to specific roles and audited purposes.
+
+Do not permit direct edits to payment ledger entries; use reversal/adjustment entries.
+
+Audit all privileged reads of sensitive documents where feasible, not only writes.
+
+6. API / BACKEND — complete technical specification
+
+Purpose: enforce the source of truth for every application. Backend services validate identity, permissions, business rules and state transitions before reading or changing data.
+
+6.1 Backend module map
+
+Module
+
+Responsibilities
+
+Authentication
+
+OTP request/verification, session/token issue, refresh, logout, device/session revocation and abuse controls.
+
+Users & profiles
+
+Role-specific profile data, account state, addresses and privacy settings.
+
+Marketplace
+
+Categories, services, worker storefronts, prices, service areas, search and availability.
+
+Bookings
+
+Booking creation, quote versions, acceptance, state transitions, item snapshots and cancellation.
+
+Scheduling
+
+Pickup windows, worker capacity, slot reservation and conflict handling.
+
+Batch engine
+
+Candidate discovery, H3 grouping, time compatibility, capacity checks, route sequence and batch lifecycle.
+
+Dispatch
+
+Partner eligibility, task offers, accept/reject, assignment history, reassignment and stop-level events.
+
+Delivery & custody
+
+Parcel labels, pickup/drop verification, custody chain, proof references and exception workflow.
+
+Payments
+
+Payment intent, provider integration, signed webhook processing, refunds, payout records and reconciliation.
+
+Notifications
+
+Push/email/SMS adapters, templates, outbox queue, retries and delivery receipts.
+
+Support & disputes
+
+Ticket creation, assignment, evidence, resolution and escalation.
+
+Reviews
+
+Rating submission, moderation and abuse controls.
+
+Admin
+
+Role-scoped management endpoints, configuration, reports and audit.
+
+Analytics
+
+Aggregated metrics and privacy-safe reporting.
+
+6.2 API conventions
+
+Version endpoints under /api/v1.
+
+Use HTTPS and JSON with consistent response envelopes and error codes.
+
+Validate every request server-side; do not trust client-calculated prices, permissions, statuses or coordinates.
+
+Use pagination, filtering and sorting for list endpoints.
+
+Use idempotency keys for booking creation, payment initiation and retry-sensitive commands.
+
+Use optimistic concurrency or transactions for worker acceptance, slot reservation, batch capacity and assignment.
+
+Verify payment webhooks with provider signatures and deduplicate provider event IDs.
+
+Return only the fields appropriate to the authenticated role and object relationship.
+
+Use structured logs with request IDs while scrubbing secrets, OTPs, payment data and unnecessary personal information.
+
+6.3 Endpoint catalogue
+
+API group
+
+Example routes (illustrative)
+
+Authentication
+
+POST /auth/otp/request; POST /auth/otp/verify; POST /auth/token/refresh; POST /auth/logout; GET /auth/sessions
+
+Customer profile
+
+GET/PATCH /me; GET/POST/PATCH/DELETE /me/addresses
+
+Discovery
+
+GET /categories; GET /services; GET /workers/nearby; GET /workers/{worker_id}; GET /workers/{worker_id}/services
+
+Worker profile
+
+GET/PATCH /worker/profile; POST /worker/verification; GET /worker/verification/status
+
+Worker catalogue
+
+GET/POST/PATCH /worker/services; PATCH /worker/services/{id}/availability; PUT /worker/hours; PUT /worker/capacity
+
+Bookings
+
+POST /bookings; GET /bookings; GET /bookings/{id}; POST /bookings/{id}/accept; POST /bookings/{id}/reject; POST /bookings/{id}/quote; POST /bookings/{id}/quote/accept
+
+Booking workflow
+
+POST /bookings/{id}/receive-items; POST /bookings/{id}/start; POST /bookings/{id}/progress; POST /bookings/{id}/ready; POST /bookings/{id}/cancel
+
+Scheduling
+
+GET /pickup-slots; POST /pickup-requests; GET /pickup-requests/{id}
+
+Batch operations
+
+GET /admin/batches/candidates; POST /admin/batches; GET /admin/batches/{id}; POST /admin/batches/{id}/assign; POST /admin/batches/{id}/split
+
+Partner tasks
+
+GET /partner/tasks/offers; POST /partner/tasks/{id}/accept; POST /partner/tasks/{id}/reject; GET /partner/tasks/active
+
+Delivery events
+
+POST /delivery/tasks/{id}/arrived; POST /delivery/tasks/{id}/pickup; POST /delivery/tasks/{id}/handover; POST /delivery/tasks/{id}/delivered; POST /delivery/tasks/{id}/exception
+
+Tracking
+
+GET /bookings/{id}/timeline; GET /delivery/tasks/{id}/tracking
+
+Payments
+
+POST /payments/intents; GET /payments/{id}; POST /payments/webhooks/{provider}; POST /admin/payments/{id}/refund
+
+Earnings
+
+GET /worker/earnings; GET /worker/payouts; GET /partner/earnings; GET /partner/payouts
+
+Support
+
+POST /support/tickets; GET /support/tickets; GET /support/tickets/{id}; POST /support/tickets/{id}/messages
+
+Reviews
+
+POST /bookings/{id}/reviews; GET /workers/{id}/reviews; POST /reviews/{id}/report
+
+Admin
+
+GET /admin/dashboard; GET /admin/audit-logs; PATCH /admin/users/{id}/status; PATCH /admin/config/{key}
+
+6.4 Example booking request
+
+POST /api/v1/bookings
+Authorization: Bearer <access_token>
+Idempotency-Key: <unique-client-generated-key>
+
+{
+  "worker_id": "worker-uuid",
+  "address_id": "address-uuid",
+  "fulfilment_method": "clickit_pickup_return",
+  "requested_pickup_window_id": "slot-uuid",
+  "items": [
+    {
+      "service_id": "service-uuid",
+      "quantity": 5,
+      "unit": "cloth",
+      "weight_kg": null,
+      "customer_note": "Separate white clothes"
+    }
+  ]
+}
+
+The backend must resolve the worker's current service configuration, validate slot/address serviceability, calculate or request a quote, store a quote snapshot and return the authoritative booking ID and status. The client must not submit a trusted total amount.
+
+6.5 Example response and error model
+
+{
+  "data": {
+    "booking_id": "booking-uuid",
+    "status": "requested",
+    "quote_status": "awaiting_worker_confirmation",
+    "currency": "INR",
+    "total_minor": null
+  },
+  "request_id": "req-uuid"
+}
+
+Errors should include a stable code, safe message, field details when relevant,
+and request_id. Never return stack traces, SQL details or secrets.
+
+6.6 External integrations
+
+Integration
+
+Purpose
+
+Implementation rule
+
+Payment provider (e.g. Razorpay)
+
+Customer collection, refund and eligible marketplace settlement.
+
+Use provider-supported marketplace flows; verify webhook signature; reconcile.
+
+Maps / routes provider
+
+Geocoding, map display, road distance, ETA and route ordering.
+
+Restrict keys; protect server secrets; review cost and terms.
+
+Firebase Cloud Messaging
+
+Push notifications to mobile devices.
+
+Store device tokens securely; remove invalid tokens; avoid sensitive lock-screen content.
+
+Object storage
+
+Shop photos, verification documents and permitted proof images.
+
+Private buckets, signed URLs, type/size checks and retention policy.
+
+OTP/SMS provider
+
+Phone verification and transactional SMS if required.
+
+Rate-limit, monitor abuse, protect provider credentials.
+
+Monitoring / error tracking
+
+Errors, performance, logs and alerts.
+
+Scrub personal data and secrets before telemetry.
+
+6.7 Backend transaction and consistency rules
+
+Booking creation must be idempotent and must reserve any limited slot atomically.
+
+Worker acceptance must prevent two workers accepting the same exclusive booking.
+
+Batch creation must lock/check task membership and capacity to prevent overbooking.
+
+Partner acceptance must ensure only one active assignment for a task unless multi-partner task design is explicitly introduced.
+
+Payment success must be based on verified provider events, not a client success screen.
+
+Refunds and payout adjustments must create traceable financial entries rather than overwrite history.
+
+Notification delivery should use an outbox pattern or equivalent durable retry design.
+
+State transitions must be validated centrally and recorded in status history.
+
+7. SMART BATCH PICKUP & RETURN — shared feature specification
+
+Confirmed concept: allow customers in nearby areas to choose a collection time window. Clickit groups compatible individual orders into a route so a delivery partner can collect from multiple people in one trip. Example discussed: five customers with 5 kg, 3 kg, 4 kg, 2 kg and 5 kg of clothes; total 19 kg in the same 9:00–10:00 window.
+
+7.1 Batch customer experience
+
+Customer chooses an available pickup window.
+
+App indicates whether the window is individual or shared-route eligible.
+
+Customer sees the agreed price and any delivery fee before confirmation.
+
+Backend may place the pickup request into a candidate group but does not promise a batch until operational rules are met.
+
+Customer receives a notification when pickup is scheduled/partner assigned.
+
+If the batch is split or delayed, customer receives an updated ETA and available alternatives.
+
+7.2 Batch eligibility rules
+
+Dimension
+
+Rule to validate
+
+Geography
+
+Nearby H3 cells create candidate groups; road distance and route ETA determine actual compatibility.
+
+Time window
+
+Customer-approved windows must overlap or satisfy a published tolerance.
+
+Capacity
+
+Total parcel count, estimated weight and volume must fit partner/vehicle limits.
+
+Destination
+
+Worker/shop destinations and stop sequence must be compatible.
+
+Handling
+
+Keep each order labelled and physically segregated; apply category-specific handling.
+
+Service promise
+
+Do not silently move a customer outside the accepted time window.
+
+Efficiency
+
+Compare route cost and detour against separate trips; do not batch if it harms service.
+
+Fallback
+
+Permit individual route, smaller batch or manual dispatch when density is low.
+
+7.3 Physical parcel integrity
+
+Every booking has its own parcel or parcel set and unique tracking identifier.
+
+Each bag/package is labelled with a non-guessable code; avoid exposing customer phone/address on external labels.
+
+Record parcel count and seal/condition at each custody handoff.
+
+Never combine separate customers' clothes or goods into an untraceable physical bundle.
+
+Batch-level status never replaces stop-level and parcel-level status.
+
+7.4 Price example from discussion
+
+Per cloth example
+
+Amount
+
+Worker
+
+₹12
+
+Delivery
+
+₹2
+
+Clickit
+
+₹1
+
+Customer total
+
+₹15
+
+Pricing decision still open  The project discussion has not settled whether ₹2 delivery is charged per cloth, per booking, per stop or allocated across a shared route. The product must display the actual policy clearly and the financial model must support all candidate pricing units until a decision is made.
+
+7.5 Batch exception cases
+
+Exception
+
+Expected handling
+
+Customer absent
+
+Record failed attempt; contact customer; apply disclosed retry/reschedule rule.
+
+Parcel count mismatch
+
+Pause handover, record discrepancy and alert operations.
+
+Vehicle capacity exceeded
+
+Do not load; split route or assign additional partner.
+
+Partner cancels
+
+Preserve assignment history and offer remaining stops to another partner.
+
+Road delay
+
+Recalculate ETA and notify impacted customers.
+
+Worker closed/unavailable
+
+Hold or reroute only with customer/worker consent and operational approval.
+
+One stop fails
+
+Keep other stops completed; do not roll back successful custody events.
+
+8. Data and ERD implementation requirements
+
+The previously discussed ER diagram is a logical draft. Use the separate Clickit blueprint's ERD as a starting visual, but apply these refinements before implementing production migrations.
+
+Domain
+
+Recommended entities
+
+Identity
+
+users, customer_profiles, worker_profiles, delivery_partner_profiles, admin_users/roles, user_addresses
+
+Marketplace
+
+service_categories, services, worker_services, service_prices, worker_hours, worker_capacity, service_areas
+
+Bookings
+
+bookings, booking_items, booking_quotes, quote_items, booking_status_history
+
+Pickup/batching
+
+pickup_requests, pickup_batches, batch_memberships, batch_stops, parcels, parcel_items
+
+Delivery
+
+delivery_tasks, delivery_assignments, delivery_events, partner_location_samples
+
+Finance
+
+payments, payment_events, refunds, payouts, payout_items, price_breakdowns, ledger_entries
+
+Trust/support
+
+verification_records, reviews, support_tickets, dispute_cases, evidence_assets, audit_logs
+
+Platform
+
+notification_outbox, device_tokens, idempotency_keys, feature_flags, app_config
+
+8.1 ERD relationship rules
+
+One user may have role-specific profiles; profile ownership must reference the same user identity.
+
+Workers and services form a many-to-many relationship through worker_services.
+
+One customer can create many bookings; each booking has its own customer, selected worker and address snapshot/reference.
+
+One booking can have multiple items and quote versions.
+
+One booking can create separate pickup and return delivery tasks.
+
+One batch has many stops; one booking/task can have historical batch membership but only one active membership where policy requires.
+
+One delivery task can have multiple assignment records over time; do not overwrite reassignment history.
+
+One parcel has a unique tracking identity and multiple custody events.
+
+One booking can have multiple payment attempts and provider events; successful financial capture must not duplicate.
+
+Financial records should be append-only or reversal-based for auditability.
+
+8.2 Constraints and indexes
+
+Unique normalized phone number; unique provider event/transaction identifiers where applicable.
+
+Check positive quantities and non-negative amounts; validate start/end timestamps.
+
+Use foreign keys and deliberate deletion behaviour; retain business history through soft deactivation or archival.
+
+Index booking customer/worker/status/date; task status/partner; batch time/status; service/category.
+
+Use PostGIS GiST indexes for spatial queries and indexed H3 cell IDs for candidate grouping.
+
+Use partial unique indexes for one active task assignment or one active batch membership where required.
+
+Store money in integer minor units (paise) with currency code, or another explicitly consistent exact-decimal design.
+
+Store booking-time snapshots of service name, unit, price and scope.
+
+9. Security and privacy requirements
+
+9.1 Authentication
+
+Use phone OTP or another approved authentication method with rate limits, expiry, attempt caps and abuse monitoring.
+
+Use short-lived access tokens and secure refresh/session rotation appropriate to the client platform.
+
+Allow session revocation and logout from other devices.
+
+Require MFA for privileged admin roles.
+
+Never store passwords, OTPs, payment secrets or access tokens in plaintext.
+
+9.2 Authorization
+
+Apply role-based access control plus object-level checks on every record.
+
+Customer can access only own bookings, addresses, payment records and support tickets.
+
+Worker can access only own storefront and bookings assigned to that worker.
+
+Partner can access only tasks offered/assigned to that partner and only necessary location/contact details.
+
+Admin permissions must be separated by operational function and reviewed regularly.
+
+Do not rely on hidden buttons or client-side checks; backend authorization is mandatory.
+
+9.3 Data security
+
+Use TLS for network traffic and managed encryption at rest for database, backups and object storage.
+
+Store secrets in a server-side secret manager; never bundle private keys in mobile/web code.
+
+Use private object storage and short-lived signed URLs for verification documents and proof images.
+
+Mask phone numbers and exact addresses where full data is not needed.
+
+Limit partner live location to active tasks/online operations with transparent notice and retention limits.
+
+Set retention and deletion rules for location, OTP, identity evidence, support attachments and logs.
+
+Scrub tokens, OTPs, addresses, payment details and identity data from application logs.
+
+9.4 Application security
+
+Validate inputs on the server and use parameterized database access.
+
+Protect against SQL injection, XSS, CSRF where applicable, broken object-level authorization, replay and webhook spoofing.
+
+Rate-limit OTP, authentication, search, booking, tracking and payment endpoints.
+
+Use idempotency keys for retry-sensitive operations.
+
+Run dependency scanning, secret scanning, code review and security testing before release.
+
+Separate development, staging and production data, credentials and payment environments.
+
+Back up the database and rehearse restoration.
+
+9.5 Legal and compliance review
+
+Before operating in India, obtain qualified legal, tax, privacy and payments advice for applicable data protection, consumer/e-commerce, GST/tax, worker/contractor, local operating and payment settlement requirements. This document is a product/technical specification, not legal advice or a compliance certification.
+
+10. Shared non-functional requirements
+
+Area
+
+Requirement
+
+Performance
+
+Common customer discovery and booking APIs should be designed for responsive mobile use; set measurable latency targets after pilot traffic estimates.
+
+Availability
+
+Define service-level objectives for core booking, payment and dispatch functions; provide graceful degradation for maps/notifications.
+
+Reliability
+
+Use retries with idempotency, durable event processing and clear failure states.
+
+Scalability
+
+Start with a modular monolith; split services only when scale/team boundaries justify it.
+
+Observability
+
+Structured logs, metrics, traces, request IDs, error monitoring and actionable alerts.
+
+Accessibility
+
+Readable contrast, scalable text, accessible labels and touch-friendly controls.
+
+Localization
+
+Use configurable currency/time/date formats; plan language support based on pilot users.
+
+Maintainability
+
+Versioned APIs, database migrations, automated tests, code review and environment configuration.
+
+11. Testing plan and acceptance criteria
+
+11.1 Cross-application journey tests
+
+Customer signs up, adds address, finds a worker and creates a booking.
+
+Worker receives the request, accepts it and confirms a quote.
+
+Customer approves the quote and completes payment.
+
+Admin can locate the booking and see its full status timeline.
+
+Delivery partner receives a task, accepts it, verifies pickup and records custody.
+
+Worker confirms receipt, completes service and marks ready.
+
+Partner collects return parcel and delivers it with proof.
+
+Customer confirms receipt, sees receipt and submits a review.
+
+Two or more customers join a compatible batch and each stop/parcel remains separately traceable.
+
+One stop fails while the rest of the batch continues without losing successful events.
+
+11.2 Security tests
+
+Customer A cannot retrieve Customer B's booking by changing an ID.
+
+Worker cannot view a different worker's jobs or private verification records.
+
+Partner cannot see unassigned tasks' exact addresses or customer contact details.
+
+Admin role cannot perform finance or super-admin actions without permission.
+
+Expired/revoked token is denied.
+
+Invalid or repeated payment webhook does not create duplicate capture/refund records.
+
+Rate limits prevent OTP brute force and repeated booking/payment abuse.
+
+Sensitive files cannot be accessed using expired or unauthorized URLs.
+
+11.3 Operational tests
+
+Worker rejects, customer cancels, partner rejects and customer is absent.
+
+Parcel count mismatch and damaged item are recorded with evidence and escalation.
+
+Batch exceeds vehicle capacity and is split safely.
+
+Partner loses network during a stop and safely retries without duplicate custody events.
+
+Payment provider is delayed or unavailable; booking state remains accurate.
+
+Notification provider is unavailable; durable retry occurs without duplicate business actions.
+
+12. Delivery roadmap
+
+Phase
+
+Deliverables
+
+Do not move forward until
+
+Phase 0 — Product decisions
+
+Pilot locality, first service categories, price units, delivery fee policy, cancellation/refund policy, verification and support model.
+
+Business rules and operating owner are approved.
+
+Phase 1 — Marketplace foundation
+
+Database, API/auth, customer app discovery/booking, worker app storefront/services/acceptance, admin basic operations.
+
+A real customer can book and a real worker can complete a shop-based order.
+
+Phase 2 — Managed delivery
+
+Partner app, delivery tasks, OTP pickup/drop, parcel labels, custody timeline, admin dispatch.
+
+End-to-end pickup/return is tested in the real locality.
+
+Phase 3 — Scheduled pickup
+
+Pickup slots, capacity, manual batch review, batch stops and notifications.
+
+Time promises, parcel handling and fallback operations work.
+
+Phase 4 — Smart batching
+
+H3 candidate grouping, road ETA, route ordering, automated capacity and exception handling.
+
+Measured improvement over manual dispatch without degrading service.
+
+Phase 5 — Expansion
+
+More areas/categories, improved analytics, automation and scale controls.
+
+Unit economics, worker supply, support and security remain healthy.
+
+Recommended build strategy  Develop the backend as a modular monolith first. Build the customer and worker experiences alongside the admin minimum needed to operate. Add the delivery-partner app when the pickup/return workflow is ready to be tested. Do not automate batching before manual operations prove the rules.
+
+13. Release checklist
+
+☐ All screens have loading, empty, error, success and permission-denied states.
+
+☐ Every action is backed by a defined API and server-side permission rule.
+
+☐ Booking and quote states are consistent across customer, worker and admin.
+
+☐ All financial amounts show unit, currency and whether estimated or final.
+
+☐ Parcel labels and custody events are tested in a physical pilot.
+
+☐ Customer/worker/partner terms and privacy notices are reviewed.
+
+☐ Admin role permissions and MFA are configured.
+
+☐ Payment webhooks, refunds, payouts and reconciliation are tested.
+
+☐ Support and incident escalation owners are assigned.
+
+☐ Backups and restore process are tested.
+
+☐ Monitoring and alert routing are active.
+
+☐ Pilot locality and service providers are ready before customer acquisition.
+
+Appendix A — Suggested screen inventory
+
+Application
+
+Screen count in this specification
+
+Main focus
+
+Customer App
+
+32
+
+Discovery, booking, payment, tracking, support and account.
+
+Worker App
+
+33
+
+Onboarding, Digital Dukaan, services, jobs, fulfilment and earnings.
+
+Delivery Partner App
+
+25
+
+Tasks, batch route, parcel custody, proof of delivery and safety.
+
+Admin Website
+
+29
+
+Users, marketplace, bookings, dispatch, finance, support, analytics and audit.
+
+API / Backend
+
+14 modules + endpoint catalogue
+
+Central rules, permissions, integrations and persistence.
+
+Appendix B — Decisions still required from the business owner
+
+Decision
+
+Options to resolve
+
+Initial pilot
+
+Which locality and which first service category?
+
+Price unit
+
+Per cloth, kg, item, alteration, service or order?
+
+Delivery fee
+
+Per cloth, per booking, per stop, distance-based or batch-shared?
+
+Worker payout
+
+On completion, scheduled settlement or another approved cycle?
+
+Customer payment timing
+
+Before work, after quote, after completion or a defined combination?
+
+Batch promise
+
+How long may Clickit wait to fill a batch before assigning an individual route?
+
+Pickup windows
+
+What windows and maximum arrival tolerance are operationally realistic?
+
+Partner model
+
+Employee, contractor, third-party fleet or mixed?
+
+Disputes
+
+What evidence and resolution policy applies to missing/damaged items?
+
+Support
+
+What hours, response targets and escalation contacts are available?
+
+Appendix C — Scope boundary
+
+This document specifies intended behaviour and a proposed implementation design. It does not claim that the applications, APIs, database, security controls, payment integrations, maps, legal policies or operational processes have already been built or verified. The ERD is a logical starting point and must be reconciled with final business rules before database migrations.
+
+Source basis: Clickit project context and discussions covering the hyperlocal marketplace, laundry/tailoring/footwear repair, Digital Dukaan, hybrid fulfilment, Smart Batch Pickup, five connected components, PostgreSQL/PostGIS/H3, FastAPI, Flutter, admin web, and the stated colour palette. Additional screen behaviour and engineering controls are clearly proposed specifications.
+
+CLICKIT — Detailed application specification | Working document | 24 November 2026  |  Page 

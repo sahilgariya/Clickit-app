@@ -1,0 +1,286 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile and active marketplace mode (customer, worker, or partner).",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the user." },
+        "displayName": { "type": "string", "description": "User's display name." },
+        "activeRole": { "type": "string", "enum": ["customer", "worker", "partner"] },
+        "activeLocality": { "type": "string", "description": "Selected neighborhood locality." },
+        "phoneMasked": { "type": "string", "description": "Optional masked contact label." },
+        "photoUrl": { "type": "string", "description": "Optional profile picture URL or compact JPEG data URI." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Must be FieldValue.serverTimestamp()" }
+      },
+      "required": ["userId", "displayName", "activeRole", "activeLocality", "createdAt", "updatedAt"]
+    },
+    "SavedAddress": {
+      "title": "SavedAddress",
+      "description": "Customer saved pickup and return address.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "label": { "type": "string" },
+        "houseNo": { "type": "string" },
+        "street": { "type": "string" },
+        "landmark": { "type": "string" },
+        "locality": { "type": "string" },
+        "city": { "type": "string" },
+        "postalCode": { "type": "string" },
+        "instructions": { "type": "string" },
+        "defaultAddress": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "label", "houseNo", "street", "locality", "city", "postalCode", "defaultAddress", "createdAt", "updatedAt"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "User notification entry for booking, pickup, quote, payment, and support events.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "category": { "type": "string", "enum": ["booking", "pickup", "quote", "payment", "support"] },
+        "bookingId": { "type": "string" },
+        "readFlag": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "message", "category", "readFlag", "createdAt", "updatedAt"]
+    },
+    "Shop": {
+      "title": "Shop",
+      "description": "Worker Digital Dukaan storefront.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "category": { "type": "string", "enum": ["laundry", "tailoring", "footwear"] },
+        "tagline": { "type": "string" },
+        "locality": { "type": "string" },
+        "addressSummary": { "type": "string" },
+        "hoursSummary": { "type": "string" },
+        "turnaroundLabel": { "type": "string" },
+        "openStatus": { "type": "boolean" },
+        "published": { "type": "boolean" },
+        "verified": { "type": "boolean" },
+        "supportsShopDrop": { "type": "boolean" },
+        "supportsWorkerDelivery": { "type": "boolean" },
+        "supportsClickitBatch": { "type": "boolean" },
+        "dailyCapacity": { "type": "integer" },
+        "activeLoad": { "type": "integer" },
+        "ratingAvg": { "type": "number" },
+        "ratingCount": { "type": "integer" },
+        "startingPriceMinor": { "type": "integer" },
+        "startingPriceUnit": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "ownerId", "shopName", "category", "tagline", "locality", "addressSummary",
+        "hoursSummary", "turnaroundLabel", "openStatus", "published", "verified",
+        "supportsShopDrop", "supportsWorkerDelivery", "supportsClickitBatch",
+        "dailyCapacity", "activeLoad", "ratingAvg", "ratingCount",
+        "startingPriceMinor", "startingPriceUnit", "createdAt", "updatedAt"
+      ]
+    },
+    "ShopService": {
+      "title": "ShopService",
+      "description": "Individual service offered by a worker Digital Dukaan.",
+      "type": "object",
+      "properties": {
+        "shopId": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "inclusions": { "type": "string" },
+        "category": { "type": "string", "enum": ["laundry", "tailoring", "footwear"] },
+        "unit": { "type": "string" },
+        "priceMinor": { "type": "integer" },
+        "minQty": { "type": "integer" },
+        "turnaroundHours": { "type": "integer" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "shopId", "ownerId", "name", "description", "category", "unit",
+        "priceMinor", "minQty", "turnaroundHours", "active", "createdAt", "updatedAt"
+      ]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "End-to-end service booking across customer, worker, and delivery partner.",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "workerOwnerId": { "type": "string" },
+        "shopId": { "type": "string" },
+        "shopName": { "type": "string" },
+        "category": { "type": "string", "enum": ["laundry", "tailoring", "footwear"] },
+        "assignedPartnerId": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "requested", "accepted", "quote_pending", "confirmed",
+            "pickup_scheduled", "picked_up", "received_by_worker",
+            "in_progress", "ready", "return_scheduled",
+            "out_for_delivery", "delivered", "completed",
+            "cancelled", "disputed"
+          ]
+        },
+        "quoteStatus": {
+          "type": "string",
+          "enum": ["estimated", "awaiting_worker_confirmation", "quote_revision_sent", "confirmed"]
+        },
+        "quoteNote": { "type": "string" },
+        "fulfilmentMethod": {
+          "type": "string",
+          "enum": ["shop_drop", "worker_delivery", "clickit_pickup_return"]
+        },
+        "slotWindowLabel": { "type": "string" },
+        "batchEligible": { "type": "boolean" },
+        "batchOptIn": { "type": "boolean" },
+        "addressLabel": { "type": "string" },
+        "addressSummary": { "type": "string" },
+        "parcelCode": { "type": "string" },
+        "handoverOtp": { "type": "string" },
+        "deliveryOtp": { "type": "string" },
+        "itemsSummary": { "type": "string" },
+        "itemCount": { "type": "integer" },
+        "weightKg": { "type": "number" },
+        "serviceSubtotalMinor": { "type": "integer" },
+        "deliveryFeeMinor": { "type": "integer" },
+        "platformFeeMinor": { "type": "integer" },
+        "totalMinor": { "type": "integer" },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid", "refunded"] },
+        "milestone": { "type": "string" },
+        "ratingStars": { "type": "integer" },
+        "reviewText": { "type": "string" },
+        "cancellationReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "customerId", "customerName", "workerOwnerId", "shopId", "shopName",
+        "category", "status", "quoteStatus", "fulfilmentMethod", "slotWindowLabel",
+        "batchEligible", "batchOptIn", "addressLabel", "addressSummary",
+        "parcelCode", "handoverOtp", "deliveryOtp", "itemsSummary", "itemCount",
+        "weightKg", "serviceSubtotalMinor", "deliveryFeeMinor", "platformFeeMinor",
+        "totalMinor", "paymentStatus", "milestone", "ratingStars", "createdAt", "updatedAt"
+      ]
+    },
+    "BookingTimelineEvent": {
+      "title": "BookingTimelineEvent",
+      "description": "Custody and status transition log for a booking.",
+      "type": "object",
+      "properties": {
+        "customerId": { "type": "string" },
+        "workerOwnerId": { "type": "string" },
+        "actorId": { "type": "string" },
+        "actorRole": { "type": "string", "enum": ["customer", "worker", "partner", "system"] },
+        "status": { "type": "string" },
+        "title": { "type": "string" },
+        "detail": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerId", "workerOwnerId", "actorId", "actorRole", "status", "title", "detail", "createdAt", "updatedAt"]
+    },
+    "DeliveryTask": {
+      "title": "DeliveryTask",
+      "description": "Smart Batch or solo pickup/return task for Delivery Partners.",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string" },
+        "customerId": { "type": "string" },
+        "workerOwnerId": { "type": "string" },
+        "partnerId": { "type": "string" },
+        "batchId": { "type": "string" },
+        "taskType": { "type": "string", "enum": ["pickup", "return"] },
+        "status": {
+          "type": "string",
+          "enum": ["offered", "accepted", "arrived", "picked_up", "handed_over", "delivered", "exception"]
+        },
+        "pickupZone": { "type": "string" },
+        "dropZone": { "type": "string" },
+        "shopName": { "type": "string" },
+        "timeWindowLabel": { "type": "string" },
+        "parcelCode": { "type": "string" },
+        "itemCount": { "type": "integer" },
+        "estimatedWeightKg": { "type": "number" },
+        "payoutMinor": { "type": "integer" },
+        "batchStopIndex": { "type": "integer" },
+        "batchTotalStops": { "type": "integer" },
+        "exceptionReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "bookingId", "customerId", "workerOwnerId", "batchId", "taskType",
+        "status", "pickupZone", "dropZone", "shopName", "timeWindowLabel",
+        "parcelCode", "itemCount", "estimatedWeightKg", "payoutMinor",
+        "batchStopIndex", "batchTotalStops", "createdAt", "updatedAt"
+      ]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Customer or worker support and dispute ticket.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "category": { "type": "string" },
+        "subject": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "in_review", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "category", "subject", "description", "status", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Authenticated user profile and active role preference."
+    },
+    "/users/{userId}/addresses/{addressId}": {
+      "schema": { "$ref": "#/entities/SavedAddress" },
+      "description": "User-owned saved addresses."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/AppNotification" },
+      "description": "User-owned activity notifications."
+    },
+    "/shops/{shopId}": {
+      "schema": { "$ref": "#/entities/Shop" },
+      "description": "Digital Dukaan storefronts."
+    },
+    "/shops/{shopId}/services/{serviceId}": {
+      "schema": { "$ref": "#/entities/ShopService" },
+      "description": "Services offered by each Digital Dukaan."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Marketplace service bookings."
+    },
+    "/bookings/{bookingId}/timeline/{eventId}": {
+      "schema": { "$ref": "#/entities/BookingTimelineEvent" },
+      "description": "Booking custody and status history."
+    },
+    "/delivery_tasks/{taskId}": {
+      "schema": { "$ref": "#/entities/DeliveryTask" },
+      "description": "Delivery partner pickup and return tasks."
+    },
+    "/support_tickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "User support tickets."
+    }
+  }
+}
