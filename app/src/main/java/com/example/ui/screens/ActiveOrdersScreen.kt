@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.Booking
 import com.example.data.BookingStatus
+import com.example.data.DeliveryTask
 import com.example.data.FulfilmentMethod
 import com.example.data.formatInr
 import com.example.ui.UiState
@@ -77,6 +78,8 @@ import com.example.ui.components.CategoryBadge
 import com.example.ui.components.EmptyStateCard
 import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
+import com.example.ui.components.SmartBatchLiveMap
+import com.example.ui.components.SmartBatchVisualTracker
 import com.example.ui.theme.ClickitBurgundy
 import com.example.ui.theme.ClickitCrimson
 import com.example.ui.theme.ClickitInfo
@@ -112,9 +115,11 @@ private fun Booking.needsUserAttention(): Boolean {
 @Composable
 fun ActiveOrdersScreen(
     activeOrdersState: UiState<List<Booking>>,
+    customerTasksState: UiState<List<DeliveryTask>> = UiState.Success(emptyList()),
     onOrderClick: (Booking) -> Unit,
     onExploreClick: () -> Unit,
     onBack: () -> Unit,
+    onSimulatePickupAlert: (Booking?) -> Unit = {},
     onRetry: () -> Unit = {}
 ) {
     BackHandler(onBack = onBack)
@@ -210,6 +215,35 @@ fun ActiveOrdersScreen(
                 }
                 is UiState.Success -> {
                     val orders = activeOrdersState.data
+                    val targetForSimulation = orders.firstOrNull {
+                        val st = BookingStatus.fromRaw(it.status)
+                        st == BookingStatus.READY || st == BookingStatus.RETURN_SCHEDULED
+                    } ?: orders.firstOrNull()
+
+                    OutlinedButton(
+                        onClick = { onSimulatePickupAlert(targetForSimulation) },
+                        border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.65f)),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .height(48.dp)
+                            .testTag("simulate_smart_batch_alert_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.NotificationsActive,
+                            contentDescription = null,
+                            tint = ClickitPeach,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Simulate Smart Batch Pickup Alert",
+                            style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                            color = ClickitPeach
+                        )
+                    }
+
                     if (orders.isEmpty()) {
                         Box(Modifier.padding(16.dp)) {
                             EmptyStateCard(
@@ -315,6 +349,26 @@ fun ActiveOrdersScreen(
                                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                val tasksList = (customerTasksState as? UiState.Success)?.data.orEmpty()
+                                val mapBooking = filtered.firstOrNull { bk ->
+                                    tasksList.any { it.bookingId == bk.id && it.status !in listOf("handed_over", "delivered", "exception") }
+                                } ?: filtered.firstOrNull {
+                                    it.fulfilmentMethod == FulfilmentMethod.CLICKIT_PICKUP_RETURN.key
+                                } ?: filtered.firstOrNull()
+                                val mapTask = mapBooking?.let { bk ->
+                                    tasksList.firstOrNull { it.bookingId == bk.id && it.status !in listOf("handed_over", "delivered", "exception") }
+                                        ?: tasksList.firstOrNull { it.bookingId == bk.id }
+                                }
+                                if (mapBooking != null) {
+                                    item(key = "live_smart_batch_map") {
+                                        SmartBatchLiveMap(
+                                            booking = mapBooking,
+                                            task = mapTask,
+                                            mapHeight = 220.dp
+                                        )
+                                    }
+                                }
+
                                 items(filtered, key = { it.id }) { booking ->
                                     ActiveOrderStatusTrackerCard(
                                         booking = booking,
@@ -407,14 +461,12 @@ fun ActiveOrdersHomeSection(
                         }
                     }
 
-                    activeOrders.take(2).forEach { booking ->
-                        ActiveOrderStatusTrackerCard(
-                            booking = booking,
-                            onClick = { onOrderClick(booking) }
-                        )
-                    }
+                    ActiveOrderStatusTrackerCard(
+                        booking = activeOrders.first(),
+                        onClick = { onOrderClick(activeOrders.first()) }
+                    )
 
-                    if (activeOrders.size > 2) {
+                    if (activeOrders.size > 1) {
                         OutlinedButton(
                             onClick = onViewAllClick,
                             border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.6f)),
@@ -425,7 +477,7 @@ fun ActiveOrdersHomeSection(
                                 .testTag("view_all_active_orders_button")
                         ) {
                             Text(
-                                text = "Track all ${activeOrders.size} active orders",
+                                text = "View all ${activeOrders.size} active orders",
                                 color = ClickitPeach
                             )
                         }
@@ -537,9 +589,10 @@ fun ActiveOrderStatusTrackerCard(
                     }
                 }
             } else {
-                OrderMilestoneStepper(
+                SmartBatchVisualTracker(
                     status = status,
-                    fulfilmentMethodRaw = booking.fulfilmentMethod
+                    isSmartBatch = booking.batchOptIn || booking.fulfilmentMethod == FulfilmentMethod.CLICKIT_PICKUP_RETURN.key,
+                    slotWindowLabel = booking.slotWindowLabel
                 )
             }
 
@@ -599,9 +652,14 @@ fun ActiveOrderStatusTrackerCard(
 
                         val payColor = if (booking.paymentStatus == "paid") ClickitSuccess else ClickitWarning
                         val payBg = if (booking.paymentStatus == "paid") ClickitSuccessContainer else ClickitWarningContainer
+                        val payLabel = if (booking.paymentStatus == "paid") {
+                            booking.paymentRef.takeIf { it.isNotBlank() }?.let { "Paid • RuPay" } ?: "Paid • RuPay"
+                        } else {
+                            "Pay via RuPay"
+                        }
                         Surface(color = payBg, shape = RoundedCornerShape(50)) {
                             Text(
-                                text = if (booking.paymentStatus == "paid") "Paid" else "Payment Pending",
+                                text = payLabel,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = payColor,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -694,114 +752,6 @@ private fun OtpInlinePill(label: String, code: String) {
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                 color = ClickitInfo
             )
-        }
-    }
-}
-
-@Composable
-private fun OrderMilestoneStepper(
-    status: BookingStatus,
-    fulfilmentMethodRaw: String
-) {
-    val isShopDrop = fulfilmentMethodRaw == FulfilmentMethod.SHOP_DROP.key
-    val stages = remember(isShopDrop) {
-        listOf(
-            "Booked",
-            if (isShopDrop) "Drop-off" else "Pickup",
-            "Service",
-            if (isShopDrop) "Ready" else "Delivery",
-            "Receipt"
-        )
-    }
-    val currentStage = status.trackerStageIndex().coerceIn(0, stages.lastIndex)
-
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            stages.forEachIndexed { idx, _ ->
-                val isCompleted = idx < currentStage
-                val isCurrent = idx == currentStage
-                val dotColor = when {
-                    isCompleted -> ClickitSuccess
-                    isCurrent -> ClickitPeach
-                    else -> ClickitSlate
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(if (isCurrent) 22.dp else 18.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isCompleted || isCurrent) dotColor.copy(alpha = 0.22f)
-                            else ClickitMidnight
-                        )
-                        .border(
-                            width = if (isCurrent) 2.dp else 1.dp,
-                            color = dotColor,
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isCompleted) {
-                        Icon(
-                            imageVector = Icons.Filled.Check,
-                            contentDescription = null,
-                            tint = ClickitSuccess,
-                            modifier = Modifier.size(11.dp)
-                        )
-                    } else if (isCurrent) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(ClickitPeach)
-                        )
-                    }
-                }
-
-                if (idx < stages.lastIndex) {
-                    val lineBrush = if (idx < currentStage) {
-                        Brush.horizontalGradient(listOf(ClickitSuccess, ClickitSuccess))
-                    } else if (idx == currentStage) {
-                        Brush.horizontalGradient(listOf(ClickitPeach, ClickitSlate))
-                    } else {
-                        Brush.horizontalGradient(listOf(ClickitSlate, ClickitSlate))
-                    }
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(2.5.dp)
-                            .padding(horizontal = 3.dp)
-                            .background(brush = lineBrush, shape = RoundedCornerShape(50))
-                    )
-                }
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            stages.forEachIndexed { idx, label ->
-                val textColor = when {
-                    idx < currentStage -> ClickitSuccess
-                    idx == currentStage -> ClickitPeach
-                    else -> ClickitMutedText
-                }
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = if (idx == currentStage) FontWeight.Bold else FontWeight.Normal
-                    ),
-                    color = textColor,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-            }
         }
     }
 }

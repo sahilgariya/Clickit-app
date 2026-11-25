@@ -1,6 +1,7 @@
 package com.example.data
 
 import android.content.Context
+import android.location.Geocoder
 import com.example.R
 import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
@@ -11,22 +12,27 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import java.util.Locale
 import kotlin.random.Random
 
 class ClickitRepository(
     private val db: FirebaseFirestore,
-    private val auth: FirebaseAuth = Firebase.auth
+    private val auth: FirebaseAuth = Firebase.auth,
+    private val appContext: Context? = null
 ) {
     constructor(context: Context) : this(
-        FirebaseFirestore.getInstance(
+        db = FirebaseFirestore.getInstance(
             context.applicationContext.getString(R.string.firestore_database_id)
-        )
+        ),
+        appContext = context.applicationContext
     )
 
     private fun requireUserId(): String =
@@ -58,6 +64,19 @@ class ClickitRepository(
                 .map { it.toObject(UserProfile::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE) }
                 .logFirestoreErrors(OperationType.GET, path, uid)
         )
+    }
+
+    suspend fun fetchUserProfile(userId: String): Result<UserProfile?> = try {
+        val uid = requireUserId()
+        check(uid == userId)
+        val snap = db.collection("users").document(uid).get().await()
+        val profile = snap.toObject(UserProfile::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+        Result.success(profile)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        handleFirestoreError(e, OperationType.GET, "users/$userId")
+        Result.failure(e)
     }
 
     fun observeAddresses(userId: String): Flow<List<SavedAddress>> = flow {
@@ -184,6 +203,23 @@ class ClickitRepository(
         )
     }
 
+    fun observeCompletedOrderHistory(userId: String): Flow<List<Booking>> = flow {
+        val uid = requireUserId()
+        check(uid == userId)
+        val path = "bookings"
+        emitAll(
+            db.collection("bookings")
+                .whereEqualTo("customerId", uid)
+                .whereEqualTo("status", BookingStatus.COMPLETED.key)
+                .snapshots()
+                .map { snap ->
+                    snap.toObjects(Booking::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+                        .sortedByDescending { it.updatedAt?.seconds ?: it.createdAt?.seconds ?: 0L }
+                }
+                .logFirestoreErrors(OperationType.LIST, path, uid)
+        )
+    }
+
     fun observeWorkerBookings(userId: String): Flow<List<Booking>> = flow {
         val uid = requireUserId()
         check(uid == userId)
@@ -243,6 +279,22 @@ class ClickitRepository(
                 .map { snap ->
                     snap.toObjects(DeliveryTask::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
                         .sortedByDescending { it.updatedAt?.seconds ?: 0L }
+                }
+                .logFirestoreErrors(OperationType.LIST, path, uid)
+        )
+    }
+
+    fun observeCustomerDeliveryTasks(userId: String): Flow<List<DeliveryTask>> = flow {
+        val uid = requireUserId()
+        check(uid == userId)
+        val path = "delivery_tasks"
+        emitAll(
+            db.collection("delivery_tasks")
+                .whereEqualTo("customerId", uid)
+                .snapshots()
+                .map { snap ->
+                    snap.toObjects(DeliveryTask::class.java, DocumentSnapshot.ServerTimestampBehavior.ESTIMATE)
+                        .sortedByDescending { it.updatedAt?.seconds ?: it.createdAt?.seconds ?: 0L }
                 }
                 .logFirestoreErrors(OperationType.LIST, path, uid)
         )
@@ -338,6 +390,7 @@ class ClickitRepository(
                 ).filterValues { it != null }
                 userRef.collection("addresses").document().set(addrPayload).await()
             }
+            ensureStarterMarketplaceIfEmpty(locClean)
             Result.success(Unit)
         } catch (e: CancellationException) {
             throw e
@@ -767,6 +820,190 @@ class ClickitRepository(
         Result.failure(e)
     }
 
+    /**
+     * Seeds verified local Laundry, Tailoring, and Footwear Repair providers with active services
+     * if the Firestore `shops` collection currently has no published providers.
+     */
+    suspend fun ensureStarterMarketplaceIfEmpty(localityHint: String = "Indiranagar, Bengaluru"): Result<Boolean> = try {
+        val uid = requireUserId()
+        val existingSnap = db.collection("shops")
+            .whereEqualTo("published", true)
+            .limit(1)
+            .get()
+            .await()
+        if (!existingSnap.isEmpty) {
+            Result.success(false)
+        } else {
+            val cleanLocality = localityHint.trim().ifBlank { "Indiranagar, Bengaluru" }.take(80)
+            data class StarterServiceSpec(
+                val name: String,
+                val description: String,
+                val unit: String,
+                val priceMinor: Long,
+                val minQty: Long,
+                val turnaroundHours: Long
+            )
+            data class StarterShopSpec(
+                val shopName: String,
+                val category: String,
+                val tagline: String,
+                val addressSummary: String,
+                val turnaroundLabel: String,
+                val ratingAvg: Double,
+                val ratingCount: Long,
+                val startingPriceMinor: Long,
+                val startingPriceUnit: String,
+                val services: List<StarterServiceSpec>
+            )
+
+            val starterCatalog = listOf(
+                StarterShopSpec(
+                    shopName = "FreshPress Fabric Studio",
+                    category = ServiceCategory.LAUNDRY.key,
+                    tagline = "Steam press, crisp starching & delicate wash care",
+                    addressSummary = "100 Feet Road, $cleanLocality",
+                    turnaroundLabel = "Same day • 8 hrs",
+                    ratingAvg = 4.9,
+                    ratingCount = 128L,
+                    startingPriceMinor = 1500L,
+                    startingPriceUnit = "cloth",
+                    services = listOf(
+                        StarterServiceSpec(
+                            name = "Steam Press & Fold",
+                            description = "Wrinkle-free steam iron with breathable garment sleeve",
+                            unit = "cloth",
+                            priceMinor = 1500L,
+                            minQty = 2L,
+                            turnaroundHours = 8L
+                        ),
+                        StarterServiceSpec(
+                            name = "Wash, Dry & Fold",
+                            description = "Hygienic separate-lot wash with gentle fabric softener",
+                            unit = "kg",
+                            priceMinor = 7900L,
+                            minQty = 2L,
+                            turnaroundHours = 24L
+                        )
+                    )
+                ),
+                StarterShopSpec(
+                    shopName = "Savile Stitch Craft",
+                    category = ServiceCategory.TAILORING.key,
+                    tagline = "Precision trouser hemming, blouse fit & zip replacements",
+                    addressSummary = "12th Main Market, $cleanLocality",
+                    turnaroundLabel = "24 hrs",
+                    ratingAvg = 4.8,
+                    ratingCount = 94L,
+                    startingPriceMinor = 9900L,
+                    startingPriceUnit = "alteration",
+                    services = listOf(
+                        StarterServiceSpec(
+                            name = "Trouser Hemming",
+                            description = "Blind-stitch or original denim hem matching thread",
+                            unit = "alteration",
+                            priceMinor = 9900L,
+                            minQty = 1L,
+                            turnaroundHours = 24L
+                        ),
+                        StarterServiceSpec(
+                            name = "Shirt Taper & Sleeve Fit",
+                            description = "Custom side-seam and cuff tailoring for crisp silhouette",
+                            unit = "garment",
+                            priceMinor = 18000L,
+                            minQty = 1L,
+                            turnaroundHours = 36L
+                        )
+                    )
+                ),
+                StarterShopSpec(
+                    shopName = "SoleCraft Footwear Spa",
+                    category = ServiceCategory.FOOTWEAR.key,
+                    tagline = "Sneaker deep clean, Vibram resole & leather polish",
+                    addressSummary = "80 Feet Corner, $cleanLocality",
+                    turnaroundLabel = "36 hrs",
+                    ratingAvg = 4.9,
+                    ratingCount = 76L,
+                    startingPriceMinor = 24900L,
+                    startingPriceUnit = "pair",
+                    services = listOf(
+                        StarterServiceSpec(
+                            name = "Sneaker Deep Clean",
+                            description = "Midsole whitening, suede brush & deodorizing treatment",
+                            unit = "pair",
+                            priceMinor = 24900L,
+                            minQty = 1L,
+                            turnaroundHours = 36L
+                        ),
+                        StarterServiceSpec(
+                            name = "Sole Stitch & Heel Tip",
+                            description = "Reinforced sole bonding and anti-slip heel replacement",
+                            unit = "pair",
+                            priceMinor = 29900L,
+                            minQty = 1L,
+                            turnaroundHours = 48L
+                        )
+                    )
+                )
+            )
+
+            for (spec in starterCatalog) {
+                val shopRef = db.collection("shops").document()
+                val shopId = shopRef.id
+                shopRef.set(
+                    mapOf(
+                        "ownerId" to uid,
+                        "shopName" to spec.shopName,
+                        "category" to spec.category,
+                        "tagline" to spec.tagline,
+                        "locality" to cleanLocality,
+                        "addressSummary" to spec.addressSummary.take(160),
+                        "hoursSummary" to "8:30 AM – 9:00 PM",
+                        "turnaroundLabel" to spec.turnaroundLabel,
+                        "openStatus" to true,
+                        "published" to true,
+                        "verified" to true,
+                        "supportsShopDrop" to true,
+                        "supportsWorkerDelivery" to true,
+                        "supportsClickitBatch" to true,
+                        "dailyCapacity" to 40L,
+                        "activeLoad" to 4L,
+                        "ratingAvg" to spec.ratingAvg,
+                        "ratingCount" to spec.ratingCount,
+                        "startingPriceMinor" to spec.startingPriceMinor,
+                        "startingPriceUnit" to spec.startingPriceUnit,
+                        "createdAt" to FieldValue.serverTimestamp(),
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    )
+                ).await()
+
+                for (svc in spec.services) {
+                    shopRef.collection("services").document().set(
+                        mapOf(
+                            "shopId" to shopId,
+                            "ownerId" to uid,
+                            "name" to svc.name,
+                            "description" to svc.description,
+                            "category" to spec.category,
+                            "unit" to svc.unit,
+                            "priceMinor" to svc.priceMinor,
+                            "minQty" to svc.minQty,
+                            "turnaroundHours" to svc.turnaroundHours,
+                            "active" to true,
+                            "createdAt" to FieldValue.serverTimestamp(),
+                            "updatedAt" to FieldValue.serverTimestamp()
+                        )
+                    ).await()
+                }
+            }
+            Result.success(true)
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        handleFirestoreError(e, OperationType.WRITE, "shops")
+        Result.failure(e)
+    }
+
     // --- BOOKINGS, QUOTES, WORKER WORKFLOW & SMART BATCH ---
 
     suspend fun createBooking(
@@ -985,11 +1222,19 @@ class ClickitRepository(
         Result.failure(e)
     }
 
-    suspend fun customerCompletePayment(booking: Booking): Result<Unit> = try {
+    suspend fun customerCompletePayment(
+        booking: Booking,
+        paymentMethod: String = "rupay_upi",
+        paymentRef: String = "RuPay UPI"
+    ): Result<Unit> = try {
         val uid = requireUserId()
+        val methodClean = paymentMethod.trim().ifBlank { "rupay_upi" }.take(32)
+        val refClean = paymentRef.trim().ifBlank { "RuPay" }.take(64)
         db.collection("bookings").document(booking.id).update(
             mapOf(
                 "paymentStatus" to "paid",
+                "paymentMethod" to methodClean,
+                "paymentRef" to refClean,
                 "updatedAt" to FieldValue.serverTimestamp()
             )
         ).await()
@@ -1000,10 +1245,10 @@ class ClickitRepository(
             actorId = uid,
             actorRole = "customer",
             status = booking.status,
-            title = "Payment Completed (${formatInr(booking.totalMinor)})",
-            detail = "UPI / Clickit Escrow verified",
+            title = "Paid via $refClean (${formatInr(booking.totalMinor)})",
+            detail = "RuPay payment verified • Clickit Escrow",
             notifyUserId = booking.customerId,
-            notifyTitle = "Payment Receipt • ${formatInr(booking.totalMinor)}",
+            notifyTitle = "RuPay Receipt • ${formatInr(booking.totalMinor)}",
             notifyCategory = "payment"
         )
         Result.success(Unit)
@@ -1221,6 +1466,24 @@ class ClickitRepository(
 
     // --- DELIVERY PARTNER & SMART BATCH ---
 
+    @Suppress("DEPRECATION")
+    private suspend fun geocodeOrFallback(addressOrZone: String, seedHint: String): GeoPointPair {
+        val ctx = appContext
+        if (ctx != null && addressOrZone.isNotBlank() && Geocoder.isPresent()) {
+            val geocoded = withContext(Dispatchers.IO) {
+                runCatching {
+                    val geocoder = Geocoder(ctx, Locale.getDefault())
+                    geocoder.getFromLocationName(addressOrZone, 1)
+                        ?.firstOrNull()
+                        ?.takeIf { isValidCoordinate(it.latitude, it.longitude) }
+                        ?.let { GeoPointPair(it.latitude, it.longitude) }
+                }.getOrNull()
+            }
+            if (geocoded != null) return geocoded
+        }
+        return resolveZoneCoordinates(addressOrZone, seedHint)
+    }
+
     private suspend fun createDeliveryTaskForBooking(booking: Booking, taskType: String, uid: String) {
         val batchSuffix = booking.slotWindowLabel.take(5).filter { it.isLetterOrDigit() }.ifBlank { "AM" }
         val batchId = if (booking.batchOptIn) "BATCH-$batchSuffix-IND" else "SOLO-${booking.parcelCode}"
@@ -1229,28 +1492,36 @@ class ClickitRepository(
         val dropZone = if (taskType == "pickup") booking.shopName else customerZone
         val payout = if (booking.deliveryFeeMinor >= 1500L) booking.deliveryFeeMinor else 2000L
 
-        db.collection("delivery_tasks").document().set(
-            mapOf(
-                "bookingId" to booking.id,
-                "customerId" to booking.customerId,
-                "workerOwnerId" to booking.workerOwnerId,
-                "batchId" to batchId,
-                "taskType" to taskType,
-                "status" to "offered",
-                "pickupZone" to pickupZone.take(80),
-                "dropZone" to dropZone.take(80),
-                "shopName" to booking.shopName.take(80),
-                "timeWindowLabel" to booking.slotWindowLabel.take(60),
-                "parcelCode" to booking.parcelCode,
-                "itemCount" to booking.itemCount,
-                "estimatedWeightKg" to booking.weightKg.coerceAtLeast(1.0),
-                "payoutMinor" to payout,
-                "batchStopIndex" to 1L,
-                "batchTotalStops" to if (booking.batchOptIn) 3L else 1L,
-                "createdAt" to FieldValue.serverTimestamp(),
-                "updatedAt" to FieldValue.serverTimestamp()
-            )
-        ).await()
+        val customerCoords = geocodeOrFallback(booking.addressSummary.ifBlank { customerZone }, booking.parcelCode)
+        val shopCoords = geocodeOrFallback("${booking.shopName}, $customerZone", booking.shopId)
+        val pickupCoords = if (taskType == "pickup") customerCoords else shopCoords
+        val dropCoords = if (taskType == "pickup") shopCoords else customerCoords
+
+        val payload = mapOf(
+            "bookingId" to booking.id,
+            "customerId" to booking.customerId,
+            "workerOwnerId" to booking.workerOwnerId,
+            "batchId" to batchId,
+            "taskType" to taskType,
+            "status" to "offered",
+            "pickupZone" to pickupZone.take(80),
+            "dropZone" to dropZone.take(80),
+            "shopName" to booking.shopName.take(80),
+            "timeWindowLabel" to booking.slotWindowLabel.take(60),
+            "parcelCode" to booking.parcelCode,
+            "itemCount" to booking.itemCount,
+            "estimatedWeightKg" to booking.weightKg.coerceAtLeast(1.0),
+            "payoutMinor" to payout,
+            "batchStopIndex" to 1L,
+            "batchTotalStops" to if (booking.batchOptIn) 3L else 1L,
+            "pickupLat" to pickupCoords.lat,
+            "pickupLng" to pickupCoords.lng,
+            "dropLat" to dropCoords.lat,
+            "dropLng" to dropCoords.lng,
+            "createdAt" to FieldValue.serverTimestamp(),
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        db.collection("delivery_tasks").document().set(payload).await()
     }
 
     suspend fun partnerAcceptTask(task: DeliveryTask): Result<Unit> = try {
@@ -1330,6 +1601,33 @@ class ClickitRepository(
         throw e
     } catch (e: Exception) {
         handleFirestoreError(e, OperationType.UPDATE, "delivery_tasks/${task.id}")
+        Result.failure(e)
+    }
+
+    suspend fun partnerUpdateLiveLocation(
+        taskId: String,
+        lat: Double,
+        lng: Double,
+        bearing: Double?
+    ): Result<Unit> = try {
+        requireUserId()
+        require(taskId.isNotBlank())
+        require(isValidCoordinate(lat, lng)) { "Invalid GPS coordinate." }
+        val updates = mutableMapOf<String, Any>(
+            "agentLat" to lat,
+            "agentLng" to lng,
+            "locationUpdatedAt" to FieldValue.serverTimestamp(),
+            "updatedAt" to FieldValue.serverTimestamp()
+        )
+        if (bearing != null && !bearing.isNaN() && bearing in 0.0..360.0) {
+            updates["agentBearing"] = bearing
+        }
+        db.collection("delivery_tasks").document(taskId).update(updates).await()
+        Result.success(Unit)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        handleFirestoreError(e, OperationType.UPDATE, "delivery_tasks/$taskId")
         Result.failure(e)
     }
 

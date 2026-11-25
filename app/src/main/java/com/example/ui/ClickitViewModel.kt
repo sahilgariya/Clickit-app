@@ -141,6 +141,10 @@ class ClickitViewModel(
         _retryTrigger.flatMapLatest { repository.observeActiveCustomerBookings(currentUserId) }
             .toUiStateFlow("activeCustomerOrders")
 
+    val orderHistory: StateFlow<UiState<List<Booking>>> =
+        _retryTrigger.flatMapLatest { repository.observeCompletedOrderHistory(currentUserId) }
+            .toUiStateFlow("orderHistory")
+
     val workerBookings: StateFlow<UiState<List<Booking>>> =
         _retryTrigger.flatMapLatest { repository.observeWorkerBookings(currentUserId) }
             .toUiStateFlow("workerBookings")
@@ -164,6 +168,10 @@ class ClickitViewModel(
     val partnerBookings: StateFlow<UiState<List<Booking>>> =
         _retryTrigger.flatMapLatest { repository.observePartnerBookings(currentUserId) }
             .toUiStateFlow("partnerBookings")
+
+    val customerDeliveryTasks: StateFlow<UiState<List<DeliveryTask>>> =
+        _retryTrigger.flatMapLatest { repository.observeCustomerDeliveryTasks(currentUserId) }
+            .toUiStateFlow("customerDeliveryTasks")
 
     val supportTickets: StateFlow<UiState<List<SupportTicket>>> =
         _retryTrigger.flatMapLatest { repository.observeSupportTickets(currentUserId) }
@@ -199,6 +207,23 @@ class ClickitViewModel(
 
     fun retryStreams() {
         _retryTrigger.value += 1
+    }
+
+    fun seedStarterShopsIfEmpty(localityHint: String = "Indiranagar, Bengaluru", silent: Boolean = false) {
+        viewModelScope.launch {
+            if (!silent) _isActionBusy.value = true
+            val res = repository.ensureStarterMarketplaceIfEmpty(localityHint)
+            if (!silent) _isActionBusy.value = false
+            res.onSuccess { seeded ->
+                if (seeded && !silent) {
+                    _actionMessage.value = "Loaded nearby laundry, tailoring & footwear providers"
+                }
+            }.onFailure { err ->
+                if (!silent) {
+                    _actionMessage.value = friendlyFirestoreMessage(err)
+                }
+            }
+        }
     }
 
     private fun runAction(successMessage: String? = null, block: suspend () -> Result<*>, onSuccess: (() -> Unit)? = null) {
@@ -391,9 +416,15 @@ class ClickitViewModel(
         block = { repository.customerRespondToQuote(booking, accept) }
     )
 
-    fun customerCompletePayment(booking: Booking) = runAction(
-        successMessage = "Payment confirmed!",
-        block = { repository.customerCompletePayment(booking) }
+    fun customerCompletePayment(
+        booking: Booking,
+        paymentMethod: String = "rupay_upi",
+        paymentRef: String = "RuPay UPI",
+        onDone: () -> Unit = {}
+    ) = runAction(
+        successMessage = "RuPay payment confirmed!",
+        block = { repository.customerCompletePayment(booking, paymentMethod, paymentRef) },
+        onSuccess = onDone
     )
 
     fun customerCancelBooking(booking: Booking, reason: String) = runAction(
@@ -440,6 +471,12 @@ class ClickitViewModel(
         successMessage = "Exception flagged; other batch stops preserved",
         block = { repository.partnerReportException(task, reason) }
     )
+
+    fun updatePartnerTaskLocation(taskId: String, lat: Double, lng: Double, bearing: Double?) {
+        viewModelScope.launch {
+            repository.partnerUpdateLiveLocation(taskId, lat, lng, bearing)
+        }
+    }
 
     fun createSupportTicket(
         bookingId: String,

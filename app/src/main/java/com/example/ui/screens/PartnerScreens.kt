@@ -1,5 +1,8 @@
 package com.example.ui.screens
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.ReportProblem
 import androidx.compose.material3.AlertDialog
@@ -37,24 +42,29 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.Booking
 import com.example.data.BookingStatus
 import com.example.data.DeliveryTask
+import com.example.data.LiveLocationTracker
 import com.example.data.formatInr
 import com.example.ui.UiState
 import com.example.ui.components.EmptyStateCard
 import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.NeonIconBadge
+import com.example.ui.components.SmartBatchLiveMap
 import com.example.ui.theme.ClickitBurgundy
 import com.example.ui.theme.ClickitCrimson
 import com.example.ui.theme.ClickitInfo
@@ -220,11 +230,39 @@ fun PartnerRouteScreen(
     isBusy: Boolean,
     onAdvanceTask: (DeliveryTask, String, String?, String) -> Unit,
     onReportException: (DeliveryTask, String) -> Unit,
+    onUpdateLiveLocation: (String, Double, Double, Double?) -> Unit = { _, _, _, _ -> },
     onRetry: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val tasks = (partnerTasksState as? UiState.Success)?.data ?: emptyList()
     val bookings = (partnerBookingsState as? UiState.Success)?.data ?: emptyList()
     val active = tasks.filter { it.status !in listOf("handed_over", "delivered", "exception") }
+
+    var hasLocationPermission by remember {
+        mutableStateOf(LiveLocationTracker.hasLocationPermission(context))
+    }
+    var shareLiveGps by rememberSaveable { mutableStateOf(true) }
+    var permissionDeniedNote by remember { mutableStateOf(false) }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        val granted = results[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            results[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        hasLocationPermission = granted
+        permissionDeniedNote = !granted
+        if (granted) shareLiveGps = true
+    }
+
+    LaunchedEffect(shareLiveGps, hasLocationPermission, active.map { it.id }) {
+        if (shareLiveGps && hasLocationPermission && active.isNotEmpty()) {
+            LiveLocationTracker.observeDeviceLocation(context).collect { fix ->
+                active.forEach { task ->
+                    onUpdateLiveLocation(task.id, fix.lat, fix.lng, fix.bearing)
+                }
+            }
+        }
+    }
 
     var otpDialogTask by remember { mutableStateOf<Pair<DeliveryTask, Booking?>?>(null) }
     var exceptionTarget by remember { mutableStateOf<DeliveryTask?>(null) }
@@ -341,6 +379,109 @@ fun PartnerRouteScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    item(key = "partner_gps_card") {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
+                            border = BorderStroke(
+                                1.dp,
+                                if (shareLiveGps && hasLocationPermission) ClickitSuccess.copy(alpha = 0.65f) else ClickitSlate
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.GpsFixed,
+                                            contentDescription = null,
+                                            tint = if (shareLiveGps && hasLocationPermission) ClickitSuccess else ClickitPeach,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = if (hasLocationPermission && shareLiveGps) {
+                                                    "Live GPS Sharing Active"
+                                                } else if (!hasLocationPermission) {
+                                                    "Enable GPS for Live Tracking"
+                                                } else {
+                                                    "Live GPS Sharing Paused"
+                                                },
+                                                style = MaterialTheme.typography.titleSmall,
+                                                color = ClickitIvory
+                                            )
+                                            Text(
+                                                text = "Broadcasts your real-time location to customers on this batch",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = ClickitMutedText
+                                            )
+                                        }
+                                    }
+                                    if (hasLocationPermission) {
+                                        Switch(
+                                            checked = shareLiveGps,
+                                            onCheckedChange = { shareLiveGps = it },
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = ClickitMidnight,
+                                                checkedTrackColor = ClickitSuccess
+                                            ),
+                                            modifier = Modifier.testTag("partner_gps_switch")
+                                        )
+                                    }
+                                }
+                                if (!hasLocationPermission) {
+                                    Button(
+                                        onClick = {
+                                            locationPermissionLauncher.launch(
+                                                arrayOf(
+                                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                                )
+                                            )
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = ClickitPeach,
+                                            contentColor = ClickitMidnight
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(48.dp)
+                                            .testTag("grant_partner_gps_button")
+                                    ) {
+                                        Text("Allow Location Access")
+                                    }
+                                    if (permissionDeniedNote) {
+                                        Text(
+                                            text = "Location permission was denied. Enable location in system settings to share live GPS.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = ClickitPeachSoft
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    val primaryTask = active.first()
+                    val primaryBooking = bookings.firstOrNull { it.id == primaryTask.bookingId }
+                    item(key = "partner_route_map") {
+                        SmartBatchLiveMap(
+                            booking = primaryBooking,
+                            task = primaryTask,
+                            mapHeight = 210.dp,
+                            headerTitle = "Live Batch Route Map"
+                        )
+                    }
+
                     items(active, key = { it.id }) { task ->
                         val linkedBooking = bookings.firstOrNull { it.id == task.bookingId }
                         Card(

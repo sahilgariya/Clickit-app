@@ -180,6 +180,7 @@ fun ClickitTopHeader(
     localityLabel: String,
     unreadNotifications: Int,
     onNotificationsClick: () -> Unit,
+    onRoleClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val subtitleText = when (activeRole) {
@@ -187,60 +188,92 @@ fun ClickitTopHeader(
         UserRole.WORKER -> "Shop Owner • ${localityLabel.ifBlank { "My Shop" }}"
         UserRole.PARTNER -> "Delivery • ${localityLabel.ifBlank { "Active Zone" }}"
     }
+    val roleChipLabel = when (activeRole) {
+        UserRole.CUSTOMER -> "Customer"
+        UserRole.WORKER -> "Shopper"
+        UserRole.PARTNER -> "Delivery"
+    }
     Surface(
         color = ClickitMidnight,
         modifier = modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                ClickitBrandLogoMark(size = 40.dp)
-                Spacer(Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    ClickitWordmark(fontSizeSp = 19f)
-                    Text(
-                        text = subtitleText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ClickitMutedText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            IconButton(
-                onClick = onNotificationsClick,
                 modifier = Modifier
-                    .testTag("header_notifications_button")
-                    .minimumInteractiveComponentSize()
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                BadgedBox(
-                    badge = {
-                        if (unreadNotifications > 0) {
-                            Badge(containerColor = ClickitCrimson, contentColor = Color.White) {
-                                Text(unreadNotifications.coerceAtMost(99).toString())
-                            }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    ClickitBrandLogoMark(size = 40.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        ClickitWordmark(fontSizeSp = 19f)
+                        Text(
+                            text = subtitleText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ClickitMutedText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    if (onRoleClick != null) {
+                        Surface(
+                            color = ClickitSlateDeep,
+                            shape = RoundedCornerShape(50),
+                            border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.55f)),
+                            modifier = Modifier
+                                .testTag("header_role_pill")
+                                .minimumInteractiveComponentSize()
+                                .clickable(onClick = onRoleClick)
+                        ) {
+                            Text(
+                                text = roleChipLabel,
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = ClickitPeach,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            )
                         }
                     }
-                ) {
-                    NeonIconBadge(
-                        icon = Icons.Filled.Notifications,
-                        tint = ClickitIvory,
-                        glowColor = if (unreadNotifications > 0) ClickitCrimson else ClickitInfo,
-                        size = 38.dp,
-                        iconSize = 19.dp,
-                        contentDescription = "Notifications"
-                    )
+
+                    IconButton(
+                        onClick = onNotificationsClick,
+                        modifier = Modifier
+                            .testTag("header_notifications_button")
+                            .minimumInteractiveComponentSize()
+                    ) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadNotifications > 0) {
+                                    Badge(containerColor = ClickitCrimson, contentColor = Color.White) {
+                                        Text(unreadNotifications.coerceAtMost(99).toString())
+                                    }
+                                }
+                            }
+                        ) {
+                            NeonIconBadge(
+                                icon = Icons.Filled.Notifications,
+                                tint = ClickitIvory,
+                                glowColor = if (unreadNotifications > 0) ClickitCrimson else ClickitInfo,
+                                size = 38.dp,
+                                iconSize = 19.dp,
+                                contentDescription = "Notifications"
+                            )
+                        }
+                    }
                 }
             }
+            HorizontalDivider(color = ClickitSubtleLine.copy(alpha = 0.65f))
         }
     }
 }

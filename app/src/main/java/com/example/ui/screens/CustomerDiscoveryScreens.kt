@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -56,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -103,17 +105,58 @@ import com.example.ui.theme.ClickitSlateDeep
 import com.example.ui.theme.ClickitSubtleLine
 import com.example.ui.theme.ClickitSuccess
 
+fun filterShops(
+    shops: List<Shop>,
+    searchQuery: String,
+    selectedCategory: ServiceCategory?,
+    batchOnly: Boolean = false
+): List<Shop> = shops.filter { shop ->
+    val query = searchQuery.trim()
+    val categoryLabel = ServiceCategory.fromRaw(shop.category).label
+    val matchesQuery = query.isBlank() ||
+        shop.shopName.contains(query, ignoreCase = true) ||
+        shop.locality.contains(query, ignoreCase = true) ||
+        shop.tagline.contains(query, ignoreCase = true) ||
+        shop.category.contains(query, ignoreCase = true) ||
+        categoryLabel.contains(query, ignoreCase = true) ||
+        (shop.category == ServiceCategory.FOOTWEAR.key &&
+            ("footwear repair".contains(query, ignoreCase = true) || "cobbler".contains(query, ignoreCase = true)))
+    val matchesCat = selectedCategory == null || shop.category == selectedCategory.key
+    val matchesBatch = !batchOnly || shop.supportsClickitBatch
+    matchesQuery && matchesCat && matchesBatch
+}
+
+fun matchServiceForReorder(
+    services: List<ShopService>,
+    itemsSummary: String
+): ShopService? {
+    if (services.isEmpty()) return null
+    val normalizedSummary = itemsSummary.trim().lowercase()
+    return services.firstOrNull { svc ->
+        svc.name.isNotBlank() && normalizedSummary.contains(svc.name.trim().lowercase())
+    } ?: services.first()
+}
+
+fun extractNotesFromSummary(itemsSummary: String): String {
+    val idx = itemsSummary.indexOf(" • ")
+    return if (idx >= 0) itemsSummary.substring(idx + 3).trim() else ""
+}
+
 @Composable
 fun CustomerHomeScreen(
     addressesState: UiState<List<SavedAddress>>,
     shopsState: UiState<List<Shop>>,
     activeOrdersState: UiState<List<Booking>>,
-    onCategoryClick: (ServiceCategory) -> Unit,
+    searchQuery: String,
+    selectedCategory: ServiceCategory?,
+    onSearchChange: (String) -> Unit,
+    onCategoryChange: (ServiceCategory?) -> Unit,
     onExploreClick: () -> Unit,
     onShopClick: (Shop) -> Unit,
     onBookingClick: (Booking) -> Unit,
     onViewActiveOrdersClick: () -> Unit,
     onManageAddressesClick: () -> Unit,
+    onLoadStarterShops: (() -> Unit)? = null,
     onRetry: () -> Unit = {}
 ) {
     val defaultAddress = (addressesState as? UiState.Success)?.data?.firstOrNull()
@@ -123,6 +166,74 @@ fun CustomerHomeScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    placeholder = { Text("Search laundry, tailoring, footwear repair...") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search local service providers",
+                            tint = ClickitPeach
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = { onSearchChange("") },
+                                modifier = Modifier.testTag("home_search_clear")
+                            ) {
+                                Icon(Icons.Filled.Close, contentDescription = "Clear search", tint = ClickitMutedText)
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = ClickitPeach,
+                        unfocusedBorderColor = ClickitSlate,
+                        focusedTextColor = ClickitIvory,
+                        unfocusedTextColor = ClickitIvory,
+                        focusedContainerColor = ClickitSlateDeep,
+                        unfocusedContainerColor = ClickitSlateDeep
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("home_search_input")
+                )
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        FilterChip(
+                            selected = selectedCategory == null,
+                            onClick = { onCategoryChange(null) },
+                            label = { Text("All") },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = ClickitPeach,
+                                selectedLabelColor = ClickitMidnight
+                            ),
+                            modifier = Modifier.testTag("home_filter_all")
+                        )
+                    }
+                    items(ServiceCategory.entries) { cat ->
+                        val chipLabel = if (cat == ServiceCategory.FOOTWEAR) "Footwear Repair" else cat.label
+                        FilterChip(
+                            selected = selectedCategory == cat,
+                            onClick = { onCategoryChange(if (selectedCategory == cat) null else cat) },
+                            label = { Text(chipLabel) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = ClickitPeach,
+                                selectedLabelColor = ClickitMidnight
+                            ),
+                            modifier = Modifier.testTag("home_filter_${cat.key}")
+                        )
+                    }
+                }
+            }
+        }
+
         item {
             Surface(
                 color = ClickitSlateDeep,
@@ -135,7 +246,7 @@ fun CustomerHomeScreen(
                     .clickable(onClick = onManageAddressesClick)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -147,7 +258,7 @@ fun CustomerHomeScreen(
                             icon = Icons.Filled.LocationOn,
                             tint = ClickitPeach,
                             glowColor = ClickitPeach,
-                            size = 36.dp,
+                            size = 34.dp,
                             iconSize = 18.dp,
                             contentDescription = "Service address"
                         )
@@ -173,37 +284,11 @@ fun CustomerHomeScreen(
         }
 
         item {
-            Surface(
-                color = ClickitSlateDeep,
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, ClickitSlate),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("home_search_trigger")
-                    .minimumInteractiveComponentSize()
-                    .clickable(onClick = onExploreClick)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Filled.Search, contentDescription = "Search services", tint = ClickitMutedText)
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "Search laundry, tailor, cobbler...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ClickitMutedText
-                    )
-                }
-            }
-        }
-
-        item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(144.dp)
-                    .clip(RoundedCornerShape(20.dp))
+                    .height(116.dp)
+                    .clip(RoundedCornerShape(18.dp))
                     .clickable(onClick = onExploreClick)
             ) {
                 Image(
@@ -264,13 +349,16 @@ fun CustomerHomeScreen(
                         ServiceCategory.TAILORING -> R.drawable.img_cat_tailoring
                         ServiceCategory.FOOTWEAR -> R.drawable.img_cat_footwear
                     }
+                    val isSelected = selectedCategory == category
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                        border = BorderStroke(1.dp, ClickitSlate),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) ClickitBurgundy.copy(alpha = 0.65f) else ClickitSlateDeep
+                        ),
+                        border = BorderStroke(1.dp, if (isSelected) ClickitPeach else ClickitSlate),
                         modifier = Modifier
                             .width(156.dp)
                             .testTag("category_card_${category.key}")
-                            .clickable { onCategoryClick(category) }
+                            .clickable { onCategoryChange(if (isSelected) null else category) }
                     ) {
                         Column {
                             Image(
@@ -298,12 +386,16 @@ fun CustomerHomeScreen(
         }
 
         item {
+            val sectionTitle = selectedCategory?.let { cat ->
+                val label = if (cat == ServiceCategory.FOOTWEAR) "Footwear Repair" else cat.label
+                "$label Providers"
+            } ?: "Nearby Shops"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Nearby Shops", style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
+                Text(sectionTitle, style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
                 Text(
                     text = "See all",
                     style = MaterialTheme.typography.labelLarge,
@@ -319,16 +411,41 @@ fun CustomerHomeScreen(
             is UiState.Loading -> item { LoadingStateView("Finding nearby local shops...") }
             is UiState.Error -> item { ErrorRetryCard(shopsState.message, onRetry = onRetry) }
             is UiState.Success -> {
-                if (shopsState.data.isEmpty()) {
+                val filteredShops = filterShops(
+                    shops = shopsState.data,
+                    searchQuery = searchQuery,
+                    selectedCategory = selectedCategory
+                )
+                if (filteredShops.isEmpty()) {
                     item {
+                        val hasFilters = searchQuery.isNotBlank() || selectedCategory != null
                         EmptyStateCard(
                             icon = Icons.Filled.Storefront,
-                            title = "No shops yet",
-                            subtitle = "Local shops will appear here."
+                            title = if (hasFilters) "No matching providers" else "No shops yet",
+                            subtitle = if (hasFilters) {
+                                "Try clearing the search or switching categories."
+                            } else {
+                                "Load verified local laundry, tailoring & footwear repair shops to get started."
+                            },
+                            actionLabel = when {
+                                hasFilters -> "Reset Filters"
+                                onLoadStarterShops != null -> "Load Local Providers"
+                                else -> null
+                            },
+                            onAction = when {
+                                hasFilters -> {
+                                    {
+                                        onSearchChange("")
+                                        onCategoryChange(null)
+                                    }
+                                }
+                                onLoadStarterShops != null -> onLoadStarterShops
+                                else -> null
+                            }
                         )
                     }
                 } else {
-                    items(shopsState.data, key = { it.id }) { shop ->
+                    items(filteredShops, key = { it.id }) { shop ->
                         ShopSummaryCard(shop = shop, onClick = { onShopClick(shop) })
                     }
                 }
@@ -347,6 +464,7 @@ fun CustomerExploreScreen(
     onCategoryChange: (ServiceCategory?) -> Unit,
     onBatchOnlyChange: (Boolean) -> Unit,
     onShopClick: (Shop) -> Unit,
+    onLoadStarterShops: (() -> Unit)? = null,
     onRetry: () -> Unit = {}
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -426,26 +544,38 @@ fun CustomerExploreScreen(
                 ErrorRetryCard(shopsState.message, onRetry = onRetry)
             }
             is UiState.Success -> {
-                val filtered = shopsState.data.filter { shop ->
-                    val matchesQuery = searchQuery.isBlank() ||
-                        shop.shopName.contains(searchQuery, ignoreCase = true) ||
-                        shop.locality.contains(searchQuery, ignoreCase = true) ||
-                        shop.tagline.contains(searchQuery, ignoreCase = true)
-                    val matchesCat = selectedCategory == null || shop.category == selectedCategory.key
-                    val matchesBatch = !batchOnly || shop.supportsClickitBatch
-                    matchesQuery && matchesCat && matchesBatch
-                }
+                val filtered = filterShops(
+                    shops = shopsState.data,
+                    searchQuery = searchQuery,
+                    selectedCategory = selectedCategory,
+                    batchOnly = batchOnly
+                )
                 if (filtered.isEmpty()) {
+                    val hasFilters = searchQuery.isNotBlank() || selectedCategory != null || batchOnly
                     Box(Modifier.padding(16.dp)) {
                         EmptyStateCard(
                             icon = Icons.Filled.Search,
-                            title = "No matching providers",
-                            subtitle = "Try clearing filters or searching another neighborhood service.",
-                            actionLabel = "Reset Filters",
-                            onAction = {
-                                onSearchChange("")
-                                onCategoryChange(null)
-                                onBatchOnlyChange(false)
+                            title = if (hasFilters) "No matching providers" else "No providers available yet",
+                            subtitle = if (hasFilters) {
+                                "Try clearing filters or searching another neighborhood service."
+                            } else {
+                                "Load verified local laundry, tailoring & footwear repair shops."
+                            },
+                            actionLabel = when {
+                                hasFilters -> "Reset Filters"
+                                onLoadStarterShops != null -> "Load Local Providers"
+                                else -> null
+                            },
+                            onAction = when {
+                                hasFilters -> {
+                                    {
+                                        onSearchChange("")
+                                        onCategoryChange(null)
+                                        onBatchOnlyChange(false)
+                                    }
+                                }
+                                onLoadStarterShops != null -> onLoadStarterShops
+                                else -> null
                             }
                         )
                     }
@@ -549,6 +679,7 @@ fun ShopBookingBottomSheet(
     addresses: List<SavedAddress>,
     customerName: String,
     isBusy: Boolean,
+    prefillBooking: Booking? = null,
     onDismiss: () -> Unit,
     onRetry: () -> Unit = {},
     onSubmitBooking: (
@@ -565,30 +696,37 @@ fun ShopBookingBottomSheet(
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val services = (servicesState as? UiState.Success)?.data ?: emptyList()
 
-    var selectedServiceId by remember(shop.id) { mutableStateOf<String?>(null) }
+    var selectedServiceId by remember(shop.id, prefillBooking?.id) { mutableStateOf<String?>(null) }
     val selectedService = services.firstOrNull { it.id == selectedServiceId } ?: services.firstOrNull()
-    var quantity by remember(shop.id, selectedService?.id) {
-        mutableIntStateOf(selectedService?.minQty?.toInt()?.coerceAtLeast(1) ?: 1)
+    var quantity by remember(shop.id, prefillBooking?.id) {
+        mutableIntStateOf(prefillBooking?.itemCount?.toInt()?.coerceAtLeast(1) ?: 1)
     }
-    var weightText by remember(shop.id) { mutableStateOf("2.5") }
-    var itemNotes by remember(shop.id) { mutableStateOf("") }
-    var selectedFulfilment by remember(shop.id) {
-        mutableStateOf(
-            when {
-                shop.supportsClickitBatch -> FulfilmentMethod.CLICKIT_PICKUP_RETURN
-                shop.supportsWorkerDelivery -> FulfilmentMethod.WORKER_DELIVERY
-                else -> FulfilmentMethod.SHOP_DROP
+    var hasAppliedPrefill by remember(shop.id, prefillBooking?.id) { mutableStateOf(false) }
+
+    LaunchedEffect(services, prefillBooking?.id) {
+        if (!hasAppliedPrefill && services.isNotEmpty()) {
+            val matched = if (prefillBooking != null) {
+                matchServiceForReorder(services, prefillBooking.itemsSummary)
+            } else {
+                services.firstOrNull()
             }
+            if (matched != null) {
+                selectedServiceId = matched.id
+                val minQty = matched.minQty.toInt().coerceAtLeast(1)
+                quantity = prefillBooking?.itemCount?.toInt()?.coerceAtLeast(minQty) ?: minQty
+                hasAppliedPrefill = true
+            }
+        }
+    }
+
+    var weightText by remember(shop.id, prefillBooking?.id) {
+        mutableStateOf(
+            prefillBooking?.weightKg?.takeIf { it > 0.0 }?.toString() ?: "2.5"
         )
     }
-    var selectedSlotIndex by remember(shop.id) { mutableIntStateOf(0) }
-    var batchOptIn by remember(shop.id) { mutableStateOf(true) }
-    var selectedAddressId by remember(shop.id) { mutableStateOf<String?>(null) }
-    val selectedAddress = addresses.firstOrNull { it.id == selectedAddressId } ?: addresses.firstOrNull()
-    var quickHouseNo by remember(shop.id) { mutableStateOf("") }
-    var quickStreet by remember(shop.id) { mutableStateOf("") }
-    var quickLocality by remember(shop.id) { mutableStateOf(shop.locality) }
-
+    var itemNotes by remember(shop.id, prefillBooking?.id) {
+        mutableStateOf(prefillBooking?.let { extractNotesFromSummary(it.itemsSummary) } ?: "")
+    }
     val availableFulfilments = remember(shop) {
         buildList {
             if (shop.supportsClickitBatch) add(FulfilmentMethod.CLICKIT_PICKUP_RETURN)
@@ -596,6 +734,34 @@ fun ShopBookingBottomSheet(
             if (shop.supportsShopDrop) add(FulfilmentMethod.SHOP_DROP)
         }.ifEmpty { listOf(FulfilmentMethod.SHOP_DROP) }
     }
+    var selectedFulfilment by remember(shop.id, prefillBooking?.id) {
+        val preferred = prefillBooking?.let { FulfilmentMethod.fromRaw(it.fulfilmentMethod) }
+        mutableStateOf(
+            if (preferred != null && preferred in availableFulfilments) {
+                preferred
+            } else {
+                when {
+                    shop.supportsClickitBatch -> FulfilmentMethod.CLICKIT_PICKUP_RETURN
+                    shop.supportsWorkerDelivery -> FulfilmentMethod.WORKER_DELIVERY
+                    else -> FulfilmentMethod.SHOP_DROP
+                }
+            }
+        )
+    }
+    var selectedSlotIndex by remember(shop.id, prefillBooking?.id) {
+        val matchedSlot = prefillBooking?.let { bk ->
+            DefaultPickupSlots.indexOfFirst { it.windowLabel == bk.slotWindowLabel }.takeIf { it >= 0 }
+        } ?: 0
+        mutableIntStateOf(matchedSlot)
+    }
+    var batchOptIn by remember(shop.id, prefillBooking?.id) {
+        mutableStateOf(prefillBooking?.batchOptIn ?: true)
+    }
+    var selectedAddressId by remember(shop.id) { mutableStateOf<String?>(null) }
+    val selectedAddress = addresses.firstOrNull { it.id == selectedAddressId } ?: addresses.firstOrNull()
+    var quickHouseNo by remember(shop.id) { mutableStateOf("") }
+    var quickStreet by remember(shop.id) { mutableStateOf("") }
+    var quickLocality by remember(shop.id) { mutableStateOf(shop.locality) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -610,6 +776,42 @@ fun ShopBookingBottomSheet(
                 .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            if (prefillBooking != null) {
+                Surface(
+                    color = ClickitBurgundy.copy(alpha = 0.65f),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.6f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Replay,
+                            contentDescription = null,
+                            tint = ClickitPeach,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Re-ordering from ${prefillBooking.parcelCode}",
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                color = ClickitPeach
+                            )
+                            Text(
+                                text = prefillBooking.itemsSummary,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ClickitPeachSoft,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

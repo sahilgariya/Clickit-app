@@ -60,7 +60,7 @@ enum class BookingStatus(val key: String, val label: String, val stepIndex: Int)
     PICKED_UP("picked_up", "Picked Up", 4),
     RECEIVED_BY_WORKER("received_by_worker", "With Worker", 5),
     IN_PROGRESS("in_progress", "In Service", 6),
-    READY("ready", "Work Ready", 7),
+    READY("ready", "Ready for Pickup", 7),
     RETURN_SCHEDULED("return_scheduled", "Return Scheduled", 8),
     OUT_FOR_DELIVERY("out_for_delivery", "Out for Delivery", 9),
     DELIVERED("delivered", "Delivered", 10),
@@ -214,6 +214,8 @@ data class Booking(
     val platformFeeMinor: Long = 100L,
     val totalMinor: Long = 0L,
     val paymentStatus: String = "pending",
+    val paymentMethod: String = "",
+    val paymentRef: String = "",
     val milestone: String = "",
     val ratingStars: Long = 0L,
     val reviewText: String = "",
@@ -259,6 +261,14 @@ data class DeliveryTask(
     val batchStopIndex: Long = 1L,
     val batchTotalStops: Long = 1L,
     val exceptionReason: String = "",
+    val pickupLat: Double? = null,
+    val pickupLng: Double? = null,
+    val dropLat: Double? = null,
+    val dropLng: Double? = null,
+    val agentLat: Double? = null,
+    val agentLng: Double? = null,
+    val agentBearing: Double? = null,
+    val locationUpdatedAt: Timestamp? = null,
     @ServerTimestamp val createdAt: Timestamp? = null,
     @ServerTimestamp val updatedAt: Timestamp? = null
 )
@@ -329,4 +339,56 @@ fun formatInr(minorUnits: Long): String {
 fun maskAddressForOffer(fullOrZone: String): String {
     val parts = fullOrZone.split(",").map { it.trim() }.filter { it.isNotBlank() }
     return if (parts.size >= 2) parts.takeLast(2).joinToString(", ") else fullOrZone
+}
+
+data class GeoPointPair(val lat: Double, val lng: Double)
+
+fun isValidCoordinate(lat: Double?, lng: Double?): Boolean =
+    lat != null && lng != null && !lat.isNaN() && !lng.isNaN() &&
+        lat in -90.0..90.0 && lng in -180.0..180.0
+
+fun resolveZoneCoordinates(zoneText: String, seedHint: String = ""): GeoPointPair {
+    val text = zoneText.lowercase(Locale.getDefault())
+    val anchor = when {
+        "indiranagar" in text -> GeoPointPair(12.9784, 77.6408)
+        "koramangala" in text -> GeoPointPair(12.9352, 77.6245)
+        "hsr" in text -> GeoPointPair(12.9121, 77.6446)
+        "whitefield" in text -> GeoPointPair(12.9698, 77.7500)
+        "jayanagar" in text -> GeoPointPair(12.9308, 77.5838)
+        "malleshwaram" in text -> GeoPointPair(13.0031, 77.5643)
+        "bandra" in text -> GeoPointPair(19.0596, 72.8295)
+        "andheri" in text -> GeoPointPair(19.1136, 72.8697)
+        "mumbai" in text -> GeoPointPair(19.0760, 72.8777)
+        "connaught" in text || "delhi" in text -> GeoPointPair(28.6315, 77.2167)
+        "gurugram" in text || "gurgaon" in text -> GeoPointPair(28.4595, 77.0266)
+        "hyderabad" in text || "jubilee" in text -> GeoPointPair(17.4326, 78.4071)
+        "pune" in text || "koregaon" in text -> GeoPointPair(18.5362, 73.8940)
+        "chennai" in text || "adyar" in text -> GeoPointPair(13.0012, 80.2565)
+        else -> GeoPointPair(12.9716, 77.5946)
+    }
+    val hash = (zoneText + "|" + seedHint).hashCode()
+    val latOffset = (((hash and 0xFF) / 255.0) - 0.5) * 0.012
+    val lngOffset = ((((hash shr 8) and 0xFF) / 255.0) - 0.5) * 0.012
+    return GeoPointPair(
+        lat = (anchor.lat + latOffset).coerceIn(-89.9, 89.9),
+        lng = (anchor.lng + lngOffset).coerceIn(-179.9, 179.9)
+    )
+}
+
+fun computeDistanceKm(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double {
+    val earthRadiusKm = 6371.0
+    val dLat = Math.toRadians(lat2 - lat1)
+    val dLng = Math.toRadians(lng2 - lng1)
+    val sinLat = kotlin.math.sin(dLat / 2.0)
+    val sinLng = kotlin.math.sin(dLng / 2.0)
+    val a = sinLat * sinLat +
+        kotlin.math.cos(Math.toRadians(lat1)) * kotlin.math.cos(Math.toRadians(lat2)) *
+        sinLng * sinLng
+    val c = 2.0 * kotlin.math.atan2(kotlin.math.sqrt(a), kotlin.math.sqrt((1.0 - a).coerceAtLeast(0.0)))
+    return earthRadiusKm * c
+}
+
+fun estimateEtaMinutes(distanceKm: Double, averageSpeedKmh: Double = 22.0): Int {
+    if (distanceKm <= 0.05) return 1
+    return kotlin.math.ceil((distanceKm / averageSpeedKmh) * 60.0).toInt().coerceIn(2, 120)
 }

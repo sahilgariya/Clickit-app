@@ -376,6 +376,10 @@ test("End-to-end Booking & DeliveryTask security boundaries, partner claim, and 
       payoutMinor: 2000,
       batchStopIndex: 1,
       batchTotalStops: 3,
+      pickupLat: 12.9716,
+      pickupLng: 77.6412,
+      dropLat: 12.9784,
+      dropLng: 77.6408,
       createdAt: pastDate(),
       updatedAt: pastDate(),
     })
@@ -398,10 +402,62 @@ test("End-to-end Booking & DeliveryTask security boundaries, partner claim, and 
     })
   );
 
+  // Customer observes own delivery tasks for live map tracking
+  await assertSucceeds(
+    aliceDb.collection("delivery_tasks").where("customerId", "==", ALICE_UID).get()
+  );
+
+  // Assigned partner streams valid live GPS coordinates
+  await assertSucceeds(
+    charlieDb.collection("delivery_tasks").doc("task_1").update({
+      agentLat: 12.9742,
+      agentLng: 77.6410,
+      agentBearing: 145.0,
+      locationUpdatedAt: pastDate(),
+      updatedAt: pastDate(),
+    })
+  );
+
+  // Reject out-of-range coordinates or unauthorized customer GPS spoof
+  await assertFails(
+    charlieDb.collection("delivery_tasks").doc("task_1").update({
+      agentLat: 120.0,
+      agentLng: 77.6410,
+      locationUpdatedAt: pastDate(),
+      updatedAt: pastDate(),
+    })
+  );
+  await assertFails(
+    aliceDb.collection("delivery_tasks").doc("task_1").update({
+      agentLat: 12.9750,
+      agentLng: 77.6411,
+      locationUpdatedAt: pastDate(),
+      updatedAt: pastDate(),
+    })
+  );
+
   // Partner cannot change service price on booking
   await assertFails(
     charlieDb.collection("bookings").doc("bk_1").update({
       totalMinor: 99900,
+      updatedAt: pastDate(),
+    })
+  );
+
+  // Customer pays via RuPay before completing order
+  await assertSucceeds(
+    aliceDb.collection("bookings").doc("bk_1").update({
+      paymentStatus: "paid",
+      paymentMethod: "rupay_card",
+      paymentRef: "RuPay •••• 4521",
+      updatedAt: pastDate(),
+    })
+  );
+
+  // Worker cannot alter customer's paymentMethod/paymentRef
+  await assertFails(
+    bobDb.collection("bookings").doc("bk_1").update({
+      paymentMethod: "tampered",
       updatedAt: pastDate(),
     })
   );

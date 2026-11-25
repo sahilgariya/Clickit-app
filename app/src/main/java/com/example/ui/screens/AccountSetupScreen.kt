@@ -80,6 +80,8 @@ import com.example.ui.theme.ClickitSlateDeep
 @Composable
 fun AccountSetupScreen(
     initialDisplayName: String,
+    initialRole: UserRole = UserRole.CUSTOMER,
+    rolePreselected: Boolean = false,
     isBusy: Boolean,
     errorMessage: String?,
     onClearError: () -> Unit,
@@ -96,7 +98,8 @@ fun AccountSetupScreen(
     onSetupPartner: (displayName: String, locality: String, phone: String) -> Unit,
     onSignOut: () -> Unit
 ) {
-    var selectedRole by remember { mutableStateOf(UserRole.CUSTOMER) }
+    var selectedRole by remember(initialRole) { mutableStateOf(initialRole) }
+    var showRolePicker by remember(rolePreselected) { mutableStateOf(!rolePreselected) }
     var displayName by remember { mutableStateOf(initialDisplayName.takeIf { it != "Clickit Neighbor" } ?: "") }
     var locality by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -185,46 +188,105 @@ fun AccountSetupScreen(
                     color = ClickitIvory
                 )
 
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    UserRole.entries.forEach { role ->
-                        val selected = selectedRole == role
-                        val roleIcon = when (role) {
-                            UserRole.CUSTOMER -> Icons.Filled.ShoppingCart
-                            UserRole.WORKER -> Icons.Filled.Storefront
-                            UserRole.PARTNER -> Icons.AutoMirrored.Filled.DirectionsBike
-                        }
-                        Surface(
-                            color = if (selected) ClickitBurgundy else ClickitSlateDeep,
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.2.dp, if (selected) ClickitPeach else ClickitSlate),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("setup_role_${role.key}")
-                                .minimumInteractiveComponentSize()
-                                .clickable {
-                                    selectedRole = role
-                                    validationError = null
-                                }
+                if (!showRolePicker) {
+                    val activeIcon = when (selectedRole) {
+                        UserRole.CUSTOMER -> Icons.Filled.ShoppingCart
+                        UserRole.WORKER -> Icons.Filled.Storefront
+                        UserRole.PARTNER -> Icons.AutoMirrored.Filled.DirectionsBike
+                    }
+                    val activeTitle = when (selectedRole) {
+                        UserRole.CUSTOMER -> "Customer Account"
+                        UserRole.WORKER -> "Shopper / Store Account"
+                        UserRole.PARTNER -> "Delivery Account"
+                    }
+                    Surface(
+                        color = ClickitBurgundy.copy(alpha = 0.7f),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.75f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .minimumInteractiveComponentSize()
+                            .testTag("setup_selected_role_pill")
+                            .clickable { showRolePicker = true }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Row(
-                                modifier = Modifier.padding(14.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
                                 NeonIconBadge(
-                                    icon = roleIcon,
-                                    tint = if (selected) ClickitPeach else ClickitIvory,
-                                    glowColor = if (selected) ClickitPeach else ClickitInfo,
-                                    size = 42.dp,
-                                    iconSize = 20.dp,
-                                    shape = RoundedCornerShape(12.dp)
+                                    icon = activeIcon,
+                                    tint = ClickitPeach,
+                                    glowColor = ClickitPeach,
+                                    size = 34.dp,
+                                    iconSize = 18.dp,
+                                    shape = RoundedCornerShape(10.dp)
                                 )
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(role.label, style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
-                                    Text(role.subtitle, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
-                                }
-                                if (selected) {
-                                    Icon(Icons.Filled.CheckCircle, contentDescription = "Selected", tint = ClickitPeach)
+                                Text(
+                                    text = activeTitle,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = ClickitIvory
+                                )
+                            }
+                            Text(
+                                text = "Change",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = ClickitPeach
+                            )
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        UserRole.entries.forEach { role ->
+                            val selected = selectedRole == role
+                            val roleIcon = when (role) {
+                                UserRole.CUSTOMER -> Icons.Filled.ShoppingCart
+                                UserRole.WORKER -> Icons.Filled.Storefront
+                                UserRole.PARTNER -> Icons.AutoMirrored.Filled.DirectionsBike
+                            }
+                            val shortLabel = when (role) {
+                                UserRole.CUSTOMER -> "Customer"
+                                UserRole.WORKER -> "Shopper"
+                                UserRole.PARTNER -> "Delivery"
+                            }
+                            Surface(
+                                color = if (selected) ClickitBurgundy else ClickitSlateDeep,
+                                shape = RoundedCornerShape(14.dp),
+                                border = BorderStroke(1.2.dp, if (selected) ClickitPeach else ClickitSlate),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("setup_role_${role.key}")
+                                    .minimumInteractiveComponentSize()
+                                    .clickable {
+                                        selectedRole = role
+                                        validationError = null
+                                    }
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    NeonIconBadge(
+                                        icon = roleIcon,
+                                        tint = if (selected) ClickitPeach else ClickitIvory,
+                                        glowColor = if (selected) ClickitPeach else ClickitInfo,
+                                        size = 34.dp,
+                                        iconSize = 18.dp,
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    Text(
+                                        text = shortLabel,
+                                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                                        color = if (selected) ClickitPeach else ClickitIvory
+                                    )
                                 }
                             }
                         }

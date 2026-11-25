@@ -21,6 +21,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.Star
@@ -57,6 +59,8 @@ import com.example.data.AppNotification
 import com.example.data.Booking
 import com.example.data.BookingStatus
 import com.example.data.BookingTimelineEvent
+import com.example.data.DeliveryTask
+import com.example.data.FulfilmentMethod
 import com.example.data.formatInr
 import com.example.ui.UiState
 import com.example.ui.components.BookingStatusBadge
@@ -67,6 +71,8 @@ import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.OtpCustodyCard
 import com.example.ui.components.PriceBreakdownCard
+import com.example.ui.components.SmartBatchLiveMap
+import com.example.ui.components.SmartBatchVisualTracker
 import com.example.ui.theme.ClickitBurgundy
 import com.example.ui.theme.ClickitCrimson
 import com.example.ui.theme.ClickitInfo
@@ -83,13 +89,15 @@ import com.example.ui.theme.ClickitWarning
 @Composable
 fun CustomerBookingsScreen(
     bookingsState: UiState<List<Booking>>,
+    orderHistoryState: UiState<List<Booking>>,
     onBookingClick: (Booking) -> Unit,
+    onReorderBooking: (Booking) -> Unit,
     onExploreClick: () -> Unit,
     onOpenLiveTracker: (() -> Unit)? = null,
     onRetry: () -> Unit = {}
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Active", "Completed", "Cancelled")
+    val tabs = listOf("Active", "Order History", "Cancelled")
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -108,7 +116,8 @@ fun CustomerBookingsScreen(
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = ClickitPeach,
                             selectedLabelColor = ClickitMidnight
-                        )
+                        ),
+                        modifier = Modifier.testTag("bookings_tab_$idx")
                     )
                 }
             }
@@ -124,41 +133,51 @@ fun CustomerBookingsScreen(
             }
         }
 
-        when (bookingsState) {
-            is UiState.Loading -> LoadingStateView("Loading your bookings...")
-            is UiState.Error -> Box(Modifier.padding(16.dp)) { ErrorRetryCard(bookingsState.message, onRetry = onRetry) }
-            is UiState.Success -> {
-                val filtered = bookingsState.data.filter { bk ->
-                    val st = BookingStatus.fromRaw(bk.status)
-                    when (selectedTab) {
-                        0 -> st.isActive()
-                        1 -> st == BookingStatus.COMPLETED
-                        else -> st == BookingStatus.CANCELLED || st == BookingStatus.DISPUTED
+        if (selectedTab == 1) {
+            OrderHistoryList(
+                orderHistoryState = orderHistoryState,
+                onOrderClick = onBookingClick,
+                onReorderClick = onReorderBooking,
+                onExploreClick = onExploreClick,
+                onRetry = onRetry,
+                modifier = Modifier.weight(1f)
+            )
+        } else {
+            when (bookingsState) {
+                is UiState.Loading -> LoadingStateView("Loading your bookings...")
+                is UiState.Error -> Box(Modifier.padding(16.dp)) { ErrorRetryCard(bookingsState.message, onRetry = onRetry) }
+                is UiState.Success -> {
+                    val filtered = bookingsState.data.filter { bk ->
+                        val st = BookingStatus.fromRaw(bk.status)
+                        when (selectedTab) {
+                            0 -> st.isActive()
+                            else -> st == BookingStatus.CANCELLED || st == BookingStatus.DISPUTED
+                        }
                     }
-                }
-                if (filtered.isEmpty()) {
-                    Box(Modifier.padding(16.dp)) {
-                        EmptyStateCard(
-                            icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                            title = "No ${tabs[selectedTab].lowercase()} orders",
-                            subtitle = "Browse nearby shops to book.",
-                            actionLabel = "Explore",
-                            onAction = onExploreClick
-                        )
-                    }
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(filtered, key = { it.id }) { booking ->
-                            if (selectedTab == 0) {
-                                ActiveOrderStatusTrackerCard(
-                                    booking = booking,
-                                    onClick = { onBookingClick(booking) }
-                                )
-                            } else {
-                                CustomerBookingCard(booking = booking, onClick = { onBookingClick(booking) })
+                    if (filtered.isEmpty()) {
+                        Box(Modifier.padding(16.dp)) {
+                            EmptyStateCard(
+                                icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                                title = "No ${tabs[selectedTab].lowercase()} orders",
+                                subtitle = "Browse nearby shops to book.",
+                                actionLabel = "Explore",
+                                onAction = onExploreClick
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(filtered, key = { it.id }) { booking ->
+                                if (selectedTab == 0) {
+                                    ActiveOrderStatusTrackerCard(
+                                        booking = booking,
+                                        onClick = { onBookingClick(booking) }
+                                    )
+                                } else {
+                                    CustomerBookingCard(booking = booking, onClick = { onBookingClick(booking) })
+                                }
                             }
                         }
                     }
@@ -212,6 +231,7 @@ private fun CustomerBookingCard(booking: Booking, onClick: () -> Unit) {
 fun CustomerBookingDetailSheet(
     booking: Booking,
     timelineState: UiState<List<BookingTimelineEvent>>,
+    deliveryTask: DeliveryTask? = null,
     isBusy: Boolean,
     onDismiss: () -> Unit,
     onRespondQuote: (Boolean) -> Unit,
@@ -219,6 +239,7 @@ fun CustomerBookingDetailSheet(
     onCancel: (String) -> Unit,
     onConfirmDeliveryAndRate: (Int, String) -> Unit,
     onReportIssue: (String) -> Unit,
+    onSimulatePickupAlert: (() -> Unit)? = null,
     onRetry: () -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -266,6 +287,23 @@ fun CustomerBookingDetailSheet(
                     Text("${booking.parcelCode} • ${booking.slotWindowLabel}", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
                 }
                 BookingStatusBadge(booking.status)
+            }
+
+            if (status != BookingStatus.CANCELLED && status != BookingStatus.DISPUTED) {
+                SmartBatchVisualTracker(
+                    status = status,
+                    isSmartBatch = booking.batchOptIn || booking.fulfilmentMethod == FulfilmentMethod.CLICKIT_PICKUP_RETURN.key,
+                    slotWindowLabel = booking.slotWindowLabel
+                )
+            }
+
+            if (status.isActive() && (booking.fulfilmentMethod == FulfilmentMethod.CLICKIT_PICKUP_RETURN.key || deliveryTask != null)) {
+                SmartBatchLiveMap(
+                    booking = booking,
+                    task = deliveryTask,
+                    mapHeight = 200.dp,
+                    headerTitle = "Real-Time Agent Map"
+                )
             }
 
             if (status == BookingStatus.QUOTE_PENDING) {
@@ -337,7 +375,52 @@ fun CustomerBookingDetailSheet(
                 ) {
                     Icon(Icons.Filled.Payment, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Pay ${formatInr(booking.totalMinor)} (UPI / Escrow)")
+                    Text("Pay ${formatInr(booking.totalMinor)} via RuPay")
+                }
+            } else if (booking.paymentStatus == "paid") {
+                Surface(
+                    color = ClickitSlateDeep,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, ClickitSuccess.copy(alpha = 0.5f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.CheckCircle,
+                            contentDescription = null,
+                            tint = ClickitSuccess,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "Paid via ${booking.paymentRef.ifBlank { "RuPay" }}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = ClickitSuccess
+                        )
+                    }
+                }
+            }
+
+            if (status.isActive() && onSimulatePickupAlert != null) {
+                OutlinedButton(
+                    onClick = onSimulatePickupAlert,
+                    border = BorderStroke(1.dp, ClickitInfo.copy(alpha = 0.7f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("detail_simulate_batch_alert_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.NotificationsActive,
+                        contentDescription = null,
+                        tint = ClickitInfo,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Simulate Smart Batch Alert", color = ClickitInfo)
                 }
             }
 

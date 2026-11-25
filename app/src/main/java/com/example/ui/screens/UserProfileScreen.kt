@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -171,6 +172,8 @@ fun ProfileAndSupportScreen(
     ticketsState: UiState<List<SupportTicket>>,
     activeRole: UserRole,
     isBusy: Boolean = false,
+    completedOrderCount: Int = 0,
+    onOpenOrderHistory: (() -> Unit)? = null,
     onOpenRoleSwitcher: () -> Unit,
     onUpdatePhoto: (Uri) -> Unit,
     onSaveProfile: (String, String, String, Uri?, Boolean, () -> Unit) -> Unit,
@@ -612,6 +615,44 @@ fun ProfileAndSupportScreen(
                                     }
                                 }
                                 Text("Switch", style = MaterialTheme.typography.labelLarge, color = ClickitPeach)
+                            }
+
+                            if (activeRole == UserRole.CUSTOMER && onOpenOrderHistory != null) {
+                                HorizontalDivider(color = ClickitSubtleLine)
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .minimumInteractiveComponentSize()
+                                        .testTag("profile_order_history_row")
+                                        .clickable(onClick = onOpenOrderHistory),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                        NeonIconBadge(
+                                            icon = Icons.Filled.History,
+                                            tint = ClickitPeach,
+                                            glowColor = ClickitPeach,
+                                            size = 38.dp,
+                                            iconSize = 18.dp
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Column {
+                                            Text("Order History", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                                            Text(
+                                                text = if (completedOrderCount > 0) {
+                                                    "$completedOrderCount completed • 1-tap re-order"
+                                                } else {
+                                                    "Past orders & RuPay receipts"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = ClickitMutedText
+                                            )
+                                        }
+                                    }
+                                    Text("View", style = MaterialTheme.typography.labelLarge, color = ClickitPeach)
+                                }
                             }
                         }
                     }

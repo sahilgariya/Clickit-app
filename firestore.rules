@@ -37,6 +37,14 @@ service cloud.firestore {
       return !(field in data) || (data[field] is string && data[field].size() <= maxLen);
     }
 
+    function isOptNumberInRange(data, field, minVal, maxVal) {
+      return !(field in data) || (data[field] is number && data[field] >= minVal && data[field] <= maxVal);
+    }
+
+    function isOptTimestamp(data, field) {
+      return !(field in data) || isValidTimestamp(data[field]);
+    }
+
     function isValidCategory(cat) {
       return cat in ['laundry', 'tailoring', 'footwear'];
     }
@@ -154,6 +162,8 @@ service cloud.firestore {
              data.platformFeeMinor is int && data.platformFeeMinor >= 0 && data.platformFeeMinor <= 1000000 &&
              data.totalMinor is int && data.totalMinor >= 0 && data.totalMinor <= 100000000 &&
              data.paymentStatus in ['pending', 'paid', 'refunded'] &&
+             isOptStr(data, 'paymentMethod', 32) &&
+             isOptStr(data, 'paymentRef', 64) &&
              isStr(data.milestone, 0, 60) &&
              data.ratingStars is int && data.ratingStars >= 0 && data.ratingStars <= 5 &&
              isOptStr(data, 'reviewText', 300) &&
@@ -193,6 +203,14 @@ service cloud.firestore {
              data.batchStopIndex is int && data.batchStopIndex >= 1 && data.batchStopIndex <= 20 &&
              data.batchTotalStops is int && data.batchTotalStops >= 1 && data.batchTotalStops <= 20 &&
              isOptStr(data, 'exceptionReason', 160) &&
+             isOptNumberInRange(data, 'pickupLat', -90, 90) &&
+             isOptNumberInRange(data, 'pickupLng', -180, 180) &&
+             isOptNumberInRange(data, 'dropLat', -90, 90) &&
+             isOptNumberInRange(data, 'dropLng', -180, 180) &&
+             isOptNumberInRange(data, 'agentLat', -90, 90) &&
+             isOptNumberInRange(data, 'agentLng', -180, 180) &&
+             isOptNumberInRange(data, 'agentBearing', 0, 360) &&
+             isOptTimestamp(data, 'locationUpdatedAt') &&
              isValidTimestamp(data.createdAt) &&
              isValidTimestamp(data.updatedAt);
     }
@@ -397,6 +415,7 @@ service cloud.firestore {
                          'addressLabel', 'addressSummary', 'parcelCode', 'handoverOtp', 'deliveryOtp',
                          'itemsSummary', 'itemCount', 'weightKg', 'serviceSubtotalMinor',
                          'deliveryFeeMinor', 'platformFeeMinor', 'totalMinor', 'paymentStatus',
+                         'paymentMethod', 'paymentRef',
                          'milestone', 'ratingStars', 'reviewText', 'cancellationReason',
                          'createdAt', 'updatedAt'
                        ]) &&
@@ -422,7 +441,7 @@ service cloud.firestore {
                             // Action: Customer quote approval, payment, receipt confirmation, or cancel
                             (existing().customerId == request.auth.uid &&
                              incoming().diff(existing()).affectedKeys().hasOnly([
-                               'status', 'quoteStatus', 'paymentStatus',
+                               'status', 'quoteStatus', 'paymentStatus', 'paymentMethod', 'paymentRef',
                                'serviceSubtotalMinor', 'deliveryFeeMinor', 'platformFeeMinor', 'totalMinor',
                                'cancellationReason', 'updatedAt'
                              ])) ||
@@ -495,7 +514,9 @@ service cloud.firestore {
                          'bookingId', 'customerId', 'workerOwnerId', 'partnerId', 'batchId', 'taskType',
                          'status', 'pickupZone', 'dropZone', 'shopName', 'timeWindowLabel',
                          'parcelCode', 'itemCount', 'estimatedWeightKg', 'payoutMinor',
-                         'batchStopIndex', 'batchTotalStops', 'exceptionReason', 'createdAt', 'updatedAt'
+                         'batchStopIndex', 'batchTotalStops', 'exceptionReason',
+                         'pickupLat', 'pickupLng', 'dropLat', 'dropLng',
+                         'createdAt', 'updatedAt'
                        ]) &&
                        isValidDeliveryTask(incoming()) &&
                        exists(/databases/$(database)/documents/bookings/$(incoming().bookingId));
@@ -514,11 +535,15 @@ service cloud.firestore {
                           incoming().status == 'accepted' &&
                           incoming().partnerId == request.auth.uid &&
                           incoming().diff(existing()).affectedKeys().hasOnly(['partnerId', 'status', 'updatedAt'])) ||
-                         // Action: Assigned partner progresses route stop
+                         // Action: Assigned partner progresses route stop or streams live GPS
                          ('partnerId' in existing() &&
                           existing().partnerId == request.auth.uid &&
                           incoming().partnerId == existing().partnerId &&
-                          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'exceptionReason', 'updatedAt'])) ||
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'status', 'exceptionReason',
+                            'agentLat', 'agentLng', 'agentBearing', 'locationUpdatedAt',
+                            'updatedAt'
+                          ])) ||
                          // Action: Worker confirms handover
                          (existing().workerOwnerId == request.auth.uid &&
                           incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']))

@@ -1,10 +1,15 @@
 package com.example
 
+import android.Manifest
+import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,19 +76,26 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.data.AuthDestination
 import com.example.data.Booking
+import com.example.data.BookingStatus
 import com.example.data.ClickitRepository
+import com.example.data.DashboardRoute
 import com.example.data.DefaultPickupSlots
+import com.example.data.RoleBasedAuthHandler
 import com.example.data.Shop
+import com.example.data.UserProfile
 import com.example.data.UserRole
 import com.example.data.attemptAutoSignIn
 import com.example.data.signOutUser
+import com.example.notifications.SmartBatchNotificationHelper
 import com.example.ui.ClickitViewModel
 import com.example.ui.UiState
 import com.example.ui.components.ClickitTopHeader
 import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.RoleSwitcherSheetDialog
+import com.example.ui.components.RuPayPaymentSheet
 import com.example.ui.screens.AccountSetupScreen
 import com.example.ui.screens.ActiveOrdersScreen
 import com.example.ui.screens.AuthScreen
@@ -92,6 +104,7 @@ import com.example.ui.screens.CustomerBookingDetailSheet
 import com.example.ui.screens.CustomerBookingsScreen
 import com.example.ui.screens.CustomerExploreScreen
 import com.example.ui.screens.CustomerHomeScreen
+import com.example.ui.screens.OrderHistoryScreen
 import com.example.ui.screens.PartnerEarningsScreen
 import com.example.ui.screens.PartnerOffersScreen
 import com.example.ui.screens.PartnerRouteScreen
@@ -110,9 +123,10 @@ import com.example.ui.theme.ClickitPeachSoft
 import com.example.ui.theme.ClickitSlateDeep
 import com.example.ui.theme.ClickitTheme
 import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,61 +149,164 @@ private data class NavTab(
 @Composable
 fun ClickitAppRoot() {
     val context = LocalContext.current
+    val appContext = context.applicationContext
     val scope = rememberCoroutineScope()
     val credentialManager = remember(context) { CredentialManager.create(context) }
 
-    var currentUser by remember { mutableStateOf(Firebase.auth.currentUser) }
-
-    DisposableEffect(Unit) {
-        val listener = FirebaseAuth.AuthStateListener { auth ->
-            currentUser = auth.currentUser
-        }
-        Firebase.auth.addAuthStateListener(listener)
-        onDispose { Firebase.auth.removeAuthStateListener(listener) }
+    val prefs = remember(appContext) {
+        appContext.getSharedPreferences("clickit_prefs", Context.MODE_PRIVATE)
     }
+    var hasCompletedOnboarding by remember {
+        mutableStateOf(prefs.getBoolean("has_completed_onboarding", false))
+    }
+
+    val repository = remember(appContext) {
+        val databaseId = appContext.getString(R.string.firestore_database_id)
+        val db = FirebaseFirestore.getInstance(databaseId)
+        ClickitRepository(db, appContext = appContext)
+    }
+    val authHandler = remember(repository) { RoleBasedAuthHandler(repository) }
+    val pendingSignupRoleFlow = remember { MutableStateFlow<UserRole?>(null) }
+    val authRetryTrigger = remember { MutableStateFlow(0) }
+
+    val initialDestination = remember {
+        val existing = Firebase.auth.currentUser
+        if (existing != null) AuthDestination.EvaluatingRole(existing.uid) else AuthDestination.Unauthenticated
+    }
+    val authDestination by remember(authHandler) {
+        authHandler.observeAuthDestination(
+            preselectedRoleFlow = pendingSignupRoleFlow,
+            retryTrigger = authRetryTrigger
+        )
+    }.collectAsStateWithLifecycle(initialValue = initialDestination)
 
     LaunchedEffect(Unit) {
         if (Firebase.auth.currentUser == null) {
             attemptAutoSignIn(
                 context = context,
                 credentialManager = credentialManager,
-                onAuthSuccess = { currentUser = Firebase.auth.currentUser },
+                onAuthSuccess = {},
                 onUnauthenticated = {},
                 scope = scope
             )
         }
     }
 
-    val user = currentUser
-    if (user == null) {
-        AuthScreen(
-            onAuthSuccess = { currentUser = Firebase.auth.currentUser }
-        )
-    } else {
-        key(user.uid) {
-            val viewModel: ClickitViewModel = viewModel(
-                key = user.uid,
-                factory = viewModelFactory {
-                    initializer {
-                        val app = checkNotNull(this[APPLICATION_KEY])
-                        val databaseId = app.getString(R.string.firestore_database_id)
-                        val db = FirebaseFirestore.getInstance(databaseId)
-                        ClickitViewModel(
-                            repository = ClickitRepository(db),
-                            currentUserId = user.uid,
-                            initialDisplayName = user.displayName ?: "Clickit Neighbor"
+    val performSignOut: () -> Unit = {
+        signOutUser(credentialManager, scope) {
+            pendingSignupRoleFlow.value = null
+        }
+    }
+
+    when (val dest = authDestination) {
+        is AuthDestination.Unauthenticated -> {
+            AuthScreen(
+                isReturningUser = hasCompletedOnboarding,
+                onAuthSuccess = { chosenRole ->
+                    pendingSignupRoleFlow.value = chosenRole
+                }
+            )
+        }
+
+        is AuthDestination.EvaluatingRole -> {
+            Surface(color = ClickitMidnight, modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    LoadingStateView("Checking your Clickit role...")
+                }
+            }
+        }
+
+        is AuthDestination.Error -> {
+            Surface(color = ClickitMidnight, modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        modifier = Modifier.widthIn(max = 480.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        ErrorRetryCard(
+                            message = dest.message,
+                            onRetry = { authRetryTrigger.value += 1 }
                         )
+                        OutlinedButton(
+                            onClick = performSignOut,
+                            border = BorderStroke(1.dp, ClickitCrimson),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp)
+                        ) {
+                            Text("Sign Out", color = ClickitPeachSoft)
+                        }
                     }
                 }
-            )
-            ClickitMainShell(
-                viewModel = viewModel,
-                onSignOut = {
-                    signOutUser(credentialManager, scope) {
-                        currentUser = null
+            }
+        }
+
+        is AuthDestination.NeedsOnboarding -> {
+            key(dest.uid) {
+                val viewModel: ClickitViewModel = viewModel(
+                    key = dest.uid,
+                    factory = viewModelFactory {
+                        initializer {
+                            ClickitViewModel(
+                                repository = repository,
+                                currentUserId = dest.uid,
+                                initialDisplayName = dest.initialDisplayName
+                            )
+                        }
                     }
+                )
+                val actionMessage by viewModel.actionMessage.collectAsStateWithLifecycle()
+                val isActionBusy by viewModel.isActionBusy.collectAsStateWithLifecycle()
+
+                AccountSetupScreen(
+                    initialDisplayName = viewModel.initialDisplayName,
+                    initialRole = dest.preselectedRole ?: UserRole.CUSTOMER,
+                    rolePreselected = dest.preselectedRole != null,
+                    isBusy = isActionBusy,
+                    errorMessage = actionMessage,
+                    onClearError = viewModel::clearMessage,
+                    onSetupCustomer = viewModel::completeCustomerSetup,
+                    onSetupWorker = viewModel::completeWorkerSetup,
+                    onSetupPartner = viewModel::completePartnerSetup,
+                    onSignOut = performSignOut
+                )
+            }
+        }
+
+        is AuthDestination.RedirectToDashboard -> {
+            LaunchedEffect(dest.profile.userId) {
+                if (!hasCompletedOnboarding) {
+                    hasCompletedOnboarding = true
+                    prefs.edit().putBoolean("has_completed_onboarding", true).apply()
                 }
-            )
+                pendingSignupRoleFlow.value = null
+            }
+            key(dest.profile.userId) {
+                val viewModel: ClickitViewModel = viewModel(
+                    key = dest.profile.userId,
+                    factory = viewModelFactory {
+                        initializer {
+                            ClickitViewModel(
+                                repository = repository,
+                                currentUserId = dest.profile.userId,
+                                initialDisplayName = dest.profile.displayName
+                            )
+                        }
+                    }
+                )
+                ClickitMainShell(
+                    viewModel = viewModel,
+                    resolvedProfile = dest.profile,
+                    resolvedRole = dest.role,
+                    resolvedRoute = dest.route,
+                    onSignOut = performSignOut
+                )
+            }
         }
     }
 }
@@ -198,9 +315,13 @@ fun ClickitAppRoot() {
 @Composable
 fun ClickitMainShell(
     viewModel: ClickitViewModel,
+    resolvedProfile: UserProfile,
+    resolvedRole: UserRole,
+    resolvedRoute: DashboardRoute,
     onSignOut: () -> Unit
 ) {
     val appContext = LocalContext.current.applicationContext
+    val coroutineScope = rememberCoroutineScope()
     val profileState by viewModel.userProfile.collectAsStateWithLifecycle()
     val addressesState by viewModel.addresses.collectAsStateWithLifecycle()
     val notificationsState by viewModel.notifications.collectAsStateWithLifecycle()
@@ -210,11 +331,13 @@ fun ClickitMainShell(
     val ownedShopServicesState by viewModel.ownedShopServices.collectAsStateWithLifecycle()
     val customerBookingsState by viewModel.customerBookings.collectAsStateWithLifecycle()
     val activeOrdersState by viewModel.activeCustomerOrders.collectAsStateWithLifecycle()
+    val orderHistoryState by viewModel.orderHistory.collectAsStateWithLifecycle()
     val workerBookingsState by viewModel.workerBookings.collectAsStateWithLifecycle()
     val bookingTimelineState by viewModel.bookingTimeline.collectAsStateWithLifecycle()
     val offeredTasksState by viewModel.offeredTasks.collectAsStateWithLifecycle()
     val partnerTasksState by viewModel.partnerTasks.collectAsStateWithLifecycle()
     val partnerBookingsState by viewModel.partnerBookings.collectAsStateWithLifecycle()
+    val customerDeliveryTasksState by viewModel.customerDeliveryTasks.collectAsStateWithLifecycle()
     val supportTicketsState by viewModel.supportTickets.collectAsStateWithLifecycle()
 
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
@@ -224,64 +347,99 @@ fun ClickitMainShell(
     val actionMessage by viewModel.actionMessage.collectAsStateWithLifecycle()
     val isActionBusy by viewModel.isActionBusy.collectAsStateWithLifecycle()
 
-    when (val pState = profileState) {
-        is UiState.Loading -> {
-            Surface(color = ClickitMidnight, modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    LoadingStateView("Loading account...")
-                }
-            }
-            return
+    val profile = (profileState as? UiState.Success)?.data ?: resolvedProfile
+    val activeRole = resolvedRole
+    val unreadCount = (notificationsState as? UiState.Success)?.data?.count { !it.readFlag } ?: 0
+    val completedOrderCount = (orderHistoryState as? UiState.Success)?.data?.size ?: 0
+
+    var selectedTab by remember(resolvedRoute) { mutableIntStateOf(0) }
+    var showRoleSwitcher by remember { mutableStateOf(false) }
+    var showNotificationsSheet by remember { mutableStateOf(false) }
+    var showActiveOrdersScreen by remember(resolvedRoute) { mutableStateOf(false) }
+    var showOrderHistoryScreen by remember(resolvedRoute) { mutableStateOf(false) }
+    var activeShopForBooking by remember { mutableStateOf<Shop?>(null) }
+    var prefillBookingForReorder by remember { mutableStateOf<Booking?>(null) }
+    var activeBookingForDetail by remember { mutableStateOf<Booking?>(null) }
+    var ruPayTargetBooking by remember { mutableStateOf<Booking?>(null) }
+    var pendingNotificationOrder by remember { mutableStateOf<Booking?>(null) }
+    var attemptedStarterSeed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(activeRole, shopsState) {
+        val loadedShops = (shopsState as? UiState.Success)?.data
+        if (activeRole == UserRole.CUSTOMER && loadedShops != null && loadedShops.isEmpty() && !attemptedStarterSeed) {
+            attemptedStarterSeed = true
+            viewModel.seedStarterShopsIfEmpty(profile.activeLocality, silent = true)
         }
-        is UiState.Error -> {
-            Surface(color = ClickitMidnight, modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {
-                    Column(
-                        modifier = Modifier.widthIn(max = 480.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        ErrorRetryCard(message = pState.message, onRetry = viewModel::retryStreams)
-                        OutlinedButton(
-                            onClick = onSignOut,
-                            border = BorderStroke(1.dp, ClickitCrimson),
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
-                        ) {
-                            Text("Sign Out", color = ClickitPeachSoft)
-                        }
-                    }
-                }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val pending = pendingNotificationOrder
+        pendingNotificationOrder = null
+        if (granted && pending != null) {
+            SmartBatchNotificationHelper.showSmartBatchPickupAlert(
+                context = appContext,
+                parcelCode = pending.parcelCode,
+                shopName = pending.shopName,
+                slotWindowLabel = pending.slotWindowLabel
+            )
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Smart Batch pickup alert sent for ${pending.parcelCode}")
             }
-            return
-        }
-        is UiState.Success -> {
-            if (pState.data == null) {
-                AccountSetupScreen(
-                    initialDisplayName = viewModel.initialDisplayName,
-                    isBusy = isActionBusy,
-                    errorMessage = actionMessage,
-                    onClearError = viewModel::clearMessage,
-                    onSetupCustomer = viewModel::completeCustomerSetup,
-                    onSetupWorker = viewModel::completeWorkerSetup,
-                    onSetupPartner = viewModel::completePartnerSetup,
-                    onSignOut = onSignOut
-                )
-                return
+        } else if (!granted) {
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Notification permission denied — status alerts shown in-app")
             }
         }
     }
 
-    val profile = (profileState as UiState.Success).data!!
-    val activeRole = UserRole.fromRaw(profile.activeRole)
-    val unreadCount = (notificationsState as? UiState.Success)?.data?.count { !it.readFlag } ?: 0
+    val triggerSmartBatchAlert: (Booking?) -> Unit = { booking ->
+        val target = booking ?: Booking(
+            id = "sim_batch",
+            parcelCode = "CLK-BATCH-01",
+            shopName = "FreshPress Laundry",
+            slotWindowLabel = "Evening 6–8 PM",
+            status = BookingStatus.READY.key
+        )
+        if (SmartBatchNotificationHelper.hasNotificationPermission(appContext)) {
+            SmartBatchNotificationHelper.showSmartBatchPickupAlert(
+                context = appContext,
+                parcelCode = target.parcelCode,
+                shopName = target.shopName,
+                slotWindowLabel = target.slotWindowLabel
+            )
+            coroutineScope.launch {
+                snackbarHostState.showSnackbar("Smart Batch alert: ${target.parcelCode} is Ready for Pickup")
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pendingNotificationOrder = target
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
-    var selectedTab by remember(activeRole) { mutableIntStateOf(0) }
-    var showRoleSwitcher by remember { mutableStateOf(false) }
-    var showNotificationsSheet by remember { mutableStateOf(false) }
-    var showActiveOrdersScreen by remember(activeRole) { mutableStateOf(false) }
-    var activeShopForBooking by remember { mutableStateOf<Shop?>(null) }
-    var activeBookingForDetail by remember { mutableStateOf<Booking?>(null) }
+    val previousOrderStatuses = remember { mutableMapOf<String, String>() }
+    var seededInitialStatuses by remember { mutableStateOf(false) }
 
-    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(activeOrdersState) {
+        val currentOrders = (activeOrdersState as? UiState.Success)?.data ?: return@LaunchedEffect
+        if (!seededInitialStatuses) {
+            currentOrders.forEach { previousOrderStatuses[it.id] = it.status }
+            seededInitialStatuses = true
+        } else {
+            currentOrders.forEach { order ->
+                val prev = previousOrderStatuses[order.id]
+                val nowReady = BookingStatus.fromRaw(order.status) == BookingStatus.READY
+                if (nowReady && prev != null && prev != order.status) {
+                    triggerSmartBatchAlert(order)
+                }
+            }
+            previousOrderStatuses.clear()
+            currentOrders.forEach { previousOrderStatuses[it.id] = it.status }
+        }
+    }
 
     LaunchedEffect(actionMessage) {
         actionMessage?.let { msg ->
@@ -297,10 +455,44 @@ fun ClickitMainShell(
             ?: open
     }
 
-    BackHandler(enabled = activeShopForBooking != null || liveBookingForDetail != null || showNotificationsSheet || showActiveOrdersScreen || selectedTab != 0) {
+    val onReorderBooking: (Booking) -> Unit = { booking ->
+        val shops = (shopsState as? UiState.Success)?.data.orEmpty()
+        val matchedShop = shops.firstOrNull { it.id == booking.shopId }
         when {
+            matchedShop == null -> {
+                showOrderHistoryScreen = false
+                selectedTab = 1
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("${booking.shopName} is currently unavailable — choose another local provider.")
+                }
+            }
+            !matchedShop.openStatus -> {
+                coroutineScope.launch {
+                    snackbarHostState.showSnackbar("${matchedShop.shopName} is currently paused for new orders.")
+                }
+            }
+            else -> {
+                prefillBookingForReorder = booking
+                viewModel.selectShop(matchedShop.id)
+                activeShopForBooking = matchedShop
+            }
+        }
+    }
+
+    BackHandler(
+        enabled = ruPayTargetBooking != null ||
+            activeShopForBooking != null ||
+            liveBookingForDetail != null ||
+            showNotificationsSheet ||
+            showActiveOrdersScreen ||
+            showOrderHistoryScreen ||
+            selectedTab != 0
+    ) {
+        when {
+            ruPayTargetBooking != null -> ruPayTargetBooking = null
             activeShopForBooking != null -> {
                 activeShopForBooking = null
+                prefillBookingForReorder = null
                 viewModel.selectShop(null)
             }
             liveBookingForDetail != null -> {
@@ -309,6 +501,7 @@ fun ClickitMainShell(
             }
             showNotificationsSheet -> showNotificationsSheet = false
             showActiveOrdersScreen -> showActiveOrdersScreen = false
+            showOrderHistoryScreen -> showOrderHistoryScreen = false
             selectedTab != 0 -> selectedTab = 0
         }
     }
@@ -358,8 +551,10 @@ fun ClickitMainShell(
             addresses = addrList,
             customerName = profile.displayName,
             isBusy = isActionBusy,
+            prefillBooking = prefillBookingForReorder,
             onDismiss = {
                 activeShopForBooking = null
+                prefillBookingForReorder = null
                 viewModel.selectShop(null)
             },
             onSubmitBooking = { svc, qty, weight, fulfilment, slotIdx, batchOptIn, addr, notes ->
@@ -376,6 +571,8 @@ fun ClickitMainShell(
                     itemNotes = notes,
                     onCreated = {
                         activeShopForBooking = null
+                        prefillBookingForReorder = null
+                        showOrderHistoryScreen = false
                         viewModel.selectShop(null)
                         selectedTab = 2 // Jump to Customer Bookings tab
                     }
@@ -386,16 +583,23 @@ fun ClickitMainShell(
     }
 
     if (liveBookingForDetail != null) {
+        val matchingTask = (customerDeliveryTasksState as? UiState.Success)?.data
+            ?.filter { it.bookingId == liveBookingForDetail.id }
+            ?.let { tasks ->
+                tasks.firstOrNull { it.status !in listOf("handed_over", "delivered", "exception") }
+                    ?: tasks.firstOrNull()
+            }
         CustomerBookingDetailSheet(
             booking = liveBookingForDetail,
             timelineState = bookingTimelineState,
+            deliveryTask = matchingTask,
             isBusy = isActionBusy,
             onDismiss = {
                 activeBookingForDetail = null
                 viewModel.selectBookingForTimeline(null)
             },
             onRespondQuote = { accept -> viewModel.customerRespondToQuote(liveBookingForDetail, accept) },
-            onPay = { viewModel.customerCompletePayment(liveBookingForDetail) },
+            onPay = { ruPayTargetBooking = liveBookingForDetail },
             onCancel = { reason -> viewModel.customerCancelBooking(liveBookingForDetail, reason) },
             onConfirmDeliveryAndRate = { stars, review ->
                 viewModel.customerConfirmDeliveryAndRate(liveBookingForDetail, stars, review)
@@ -408,7 +612,25 @@ fun ClickitMainShell(
                     description = desc
                 )
             },
+            onSimulatePickupAlert = { triggerSmartBatchAlert(liveBookingForDetail) },
             onRetry = viewModel::retryStreams
+        )
+    }
+
+    if (ruPayTargetBooking != null) {
+        val payTarget = ruPayTargetBooking!!
+        RuPayPaymentSheet(
+            booking = payTarget,
+            isBusy = isActionBusy,
+            onDismiss = { ruPayTargetBooking = null },
+            onConfirmPayment = { method, ref ->
+                viewModel.customerCompletePayment(
+                    booking = payTarget,
+                    paymentMethod = method,
+                    paymentRef = ref,
+                    onDone = { ruPayTargetBooking = null }
+                )
+            }
         )
     }
 
@@ -449,11 +671,14 @@ fun ClickitMainShell(
                 unreadNotifications = unreadCount,
                 onNotificationsClick = {
                     if (activeRole == UserRole.CUSTOMER) {
+                        showActiveOrdersScreen = false
+                        showOrderHistoryScreen = false
                         selectedTab = 3
                     } else {
                         showNotificationsSheet = true
                     }
-                }
+                },
+                onRoleClick = { showRoleSwitcher = true }
             )
         },
         bottomBar = {
@@ -461,9 +686,10 @@ fun ClickitMainShell(
                 NavigationBar(containerColor = ClickitSlateDeep) {
                     navTabs.forEachIndexed { index, tab ->
                         NavigationBarItem(
-                            selected = selectedTab == index && !showActiveOrdersScreen,
+                            selected = selectedTab == index && !showActiveOrdersScreen && !showOrderHistoryScreen,
                             onClick = {
                                 showActiveOrdersScreen = false
+                                showOrderHistoryScreen = false
                                 selectedTab = index
                             },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
@@ -494,9 +720,10 @@ fun ClickitMainShell(
                 ) {
                     navTabs.forEachIndexed { index, tab ->
                         NavigationRailItem(
-                            selected = selectedTab == index && !showActiveOrdersScreen,
+                            selected = selectedTab == index && !showActiveOrdersScreen && !showOrderHistoryScreen,
                             onClick = {
                                 showActiveOrdersScreen = false
+                                showOrderHistoryScreen = false
                                 selectedTab = index
                             },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
@@ -515,10 +742,25 @@ fun ClickitMainShell(
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                when (activeRole) {
-                    UserRole.CUSTOMER -> if (showActiveOrdersScreen) {
-                        ActiveOrdersScreen(
+                when (resolvedRoute) {
+                    DashboardRoute.CUSTOMER_HOME -> when {
+                        showOrderHistoryScreen -> OrderHistoryScreen(
+                            orderHistoryState = orderHistoryState,
+                            onOrderClick = { bk ->
+                                viewModel.selectBookingForTimeline(bk.id, asWorker = false)
+                                activeBookingForDetail = bk
+                            },
+                            onReorderClick = onReorderBooking,
+                            onExploreClick = {
+                                showOrderHistoryScreen = false
+                                selectedTab = 1
+                            },
+                            onBack = { showOrderHistoryScreen = false },
+                            onRetry = viewModel::retryStreams
+                        )
+                        showActiveOrdersScreen -> ActiveOrdersScreen(
                             activeOrdersState = activeOrdersState,
+                            customerTasksState = customerDeliveryTasksState,
                             onOrderClick = { bk ->
                                 viewModel.selectBookingForTimeline(bk.id, asWorker = false)
                                 activeBookingForDetail = bk
@@ -528,101 +770,111 @@ fun ClickitMainShell(
                                 selectedTab = 1
                             },
                             onBack = { showActiveOrdersScreen = false },
+                            onSimulatePickupAlert = triggerSmartBatchAlert,
                             onRetry = viewModel::retryStreams
                         )
-                    } else when (selectedTab) {
-                        0 -> CustomerHomeScreen(
-                            addressesState = addressesState,
-                            shopsState = shopsState,
-                            activeOrdersState = activeOrdersState,
-                            onCategoryClick = { cat ->
-                                viewModel.setCategoryFilter(cat)
-                                selectedTab = 1
-                            },
-                            onExploreClick = { selectedTab = 1 },
-                            onShopClick = { shop ->
-                                viewModel.selectShop(shop.id)
-                                activeShopForBooking = shop
-                            },
-                            onBookingClick = { bk ->
-                                viewModel.selectBookingForTimeline(bk.id, asWorker = false)
-                                activeBookingForDetail = bk
-                            },
-                            onViewActiveOrdersClick = { showActiveOrdersScreen = true },
-                            onManageAddressesClick = { selectedTab = 4 },
-                            onRetry = viewModel::retryStreams
-                        )
-                        1 -> CustomerExploreScreen(
-                            shopsState = shopsState,
-                            searchQuery = searchQuery,
-                            selectedCategory = categoryFilter,
-                            batchOnly = batchOnlyFilter,
-                            onSearchChange = viewModel::setSearchQuery,
-                            onCategoryChange = viewModel::setCategoryFilter,
-                            onBatchOnlyChange = viewModel::setBatchOnlyFilter,
-                            onShopClick = { shop ->
-                                viewModel.selectShop(shop.id)
-                                activeShopForBooking = shop
-                            },
-                            onRetry = viewModel::retryStreams
-                        )
-                        2 -> CustomerBookingsScreen(
-                            bookingsState = customerBookingsState,
-                            onBookingClick = { bk ->
-                                viewModel.selectBookingForTimeline(bk.id, asWorker = false)
-                                activeBookingForDetail = bk
-                            },
-                            onExploreClick = { selectedTab = 1 },
-                            onOpenLiveTracker = { showActiveOrdersScreen = true },
-                            onRetry = viewModel::retryStreams
-                        )
-                        3 -> CustomerActivityScreen(
-                            notificationsState = notificationsState,
-                            onNotificationClick = { notif ->
-                                viewModel.markNotificationRead(notif.id)
-                                if (notif.bookingId.isNotBlank()) {
-                                    val bk = (customerBookingsState as? UiState.Success)?.data
-                                        ?.firstOrNull { it.id == notif.bookingId }
-                                    if (bk != null) {
-                                        viewModel.selectBookingForTimeline(bk.id, asWorker = false)
-                                        activeBookingForDetail = bk
+                        else -> when (selectedTab) {
+                            0 -> CustomerHomeScreen(
+                                addressesState = addressesState,
+                                shopsState = shopsState,
+                                activeOrdersState = activeOrdersState,
+                                searchQuery = searchQuery,
+                                selectedCategory = categoryFilter,
+                                onSearchChange = viewModel::setSearchQuery,
+                                onCategoryChange = viewModel::setCategoryFilter,
+                                onExploreClick = { selectedTab = 1 },
+                                onShopClick = { shop ->
+                                    prefillBookingForReorder = null
+                                    viewModel.selectShop(shop.id)
+                                    activeShopForBooking = shop
+                                },
+                                onBookingClick = { bk ->
+                                    viewModel.selectBookingForTimeline(bk.id, asWorker = false)
+                                    activeBookingForDetail = bk
+                                },
+                                onViewActiveOrdersClick = { showActiveOrdersScreen = true },
+                                onManageAddressesClick = { selectedTab = 4 },
+                                onLoadStarterShops = { viewModel.seedStarterShopsIfEmpty(profile.activeLocality) },
+                                onRetry = viewModel::retryStreams
+                            )
+                            1 -> CustomerExploreScreen(
+                                shopsState = shopsState,
+                                searchQuery = searchQuery,
+                                selectedCategory = categoryFilter,
+                                batchOnly = batchOnlyFilter,
+                                onSearchChange = viewModel::setSearchQuery,
+                                onCategoryChange = viewModel::setCategoryFilter,
+                                onBatchOnlyChange = viewModel::setBatchOnlyFilter,
+                                onShopClick = { shop ->
+                                    prefillBookingForReorder = null
+                                    viewModel.selectShop(shop.id)
+                                    activeShopForBooking = shop
+                                },
+                                onLoadStarterShops = { viewModel.seedStarterShopsIfEmpty(profile.activeLocality) },
+                                onRetry = viewModel::retryStreams
+                            )
+                            2 -> CustomerBookingsScreen(
+                                bookingsState = customerBookingsState,
+                                orderHistoryState = orderHistoryState,
+                                onBookingClick = { bk ->
+                                    viewModel.selectBookingForTimeline(bk.id, asWorker = false)
+                                    activeBookingForDetail = bk
+                                },
+                                onReorderBooking = onReorderBooking,
+                                onExploreClick = { selectedTab = 1 },
+                                onOpenLiveTracker = { showActiveOrdersScreen = true },
+                                onRetry = viewModel::retryStreams
+                            )
+                            3 -> CustomerActivityScreen(
+                                notificationsState = notificationsState,
+                                onNotificationClick = { notif ->
+                                    viewModel.markNotificationRead(notif.id)
+                                    if (notif.bookingId.isNotBlank()) {
+                                        val bk = (customerBookingsState as? UiState.Success)?.data
+                                            ?.firstOrNull { it.id == notif.bookingId }
+                                        if (bk != null) {
+                                            viewModel.selectBookingForTimeline(bk.id, asWorker = false)
+                                            activeBookingForDetail = bk
+                                        }
                                     }
-                                }
-                            },
-                            onRetry = viewModel::retryStreams
-                        )
-                        else -> ProfileAndSupportScreen(
-                            profileState = profileState,
-                            addressesState = addressesState,
-                            ticketsState = supportTicketsState,
-                            activeRole = activeRole,
-                            isBusy = isActionBusy,
-                            onOpenRoleSwitcher = { showRoleSwitcher = true },
-                            onUpdatePhoto = { uri ->
-                                viewModel.updateProfilePhoto(uri, appContext.contentResolver)
-                            },
-                            onSaveProfile = { name, locality, phone, uri, clear, onDone ->
-                                viewModel.updateProfile(
-                                    displayName = name,
-                                    locality = locality,
-                                    phoneMasked = phone,
-                                    newPhotoUri = uri,
-                                    clearPhoto = clear,
-                                    contentResolver = appContext.contentResolver,
-                                    onDone = onDone
-                                )
-                            },
-                            onSaveAddress = viewModel::saveAddress,
-                            onDeleteAddress = viewModel::deleteAddress,
-                            onCreateTicket = { cat, sub, desc ->
-                                viewModel.createSupportTicket("", cat, sub, desc)
-                            },
-                            onRetry = viewModel::retryStreams,
-                            onSignOut = onSignOut
-                        )
+                                },
+                                onRetry = viewModel::retryStreams
+                            )
+                            else -> ProfileAndSupportScreen(
+                                profileState = profileState,
+                                addressesState = addressesState,
+                                ticketsState = supportTicketsState,
+                                activeRole = activeRole,
+                                isBusy = isActionBusy,
+                                completedOrderCount = completedOrderCount,
+                                onOpenOrderHistory = { showOrderHistoryScreen = true },
+                                onOpenRoleSwitcher = { showRoleSwitcher = true },
+                                onUpdatePhoto = { uri ->
+                                    viewModel.updateProfilePhoto(uri, appContext.contentResolver)
+                                },
+                                onSaveProfile = { name, locality, phone, uri, clear, onDone ->
+                                    viewModel.updateProfile(
+                                        displayName = name,
+                                        locality = locality,
+                                        phoneMasked = phone,
+                                        newPhotoUri = uri,
+                                        clearPhoto = clear,
+                                        contentResolver = appContext.contentResolver,
+                                        onDone = onDone
+                                    )
+                                },
+                                onSaveAddress = viewModel::saveAddress,
+                                onDeleteAddress = viewModel::deleteAddress,
+                                onCreateTicket = { cat, sub, desc ->
+                                    viewModel.createSupportTicket("", cat, sub, desc)
+                                },
+                                onRetry = viewModel::retryStreams,
+                                onSignOut = onSignOut
+                            )
+                        }
                     }
 
-                    UserRole.WORKER -> when (selectedTab) {
+                    DashboardRoute.SHOPPER_DASHBOARD -> when (selectedTab) {
                         0 -> WorkerDashboardScreen(
                             ownedShopsState = ownedShopsState,
                             workerBookingsState = workerBookingsState,
@@ -680,7 +932,7 @@ fun ClickitMainShell(
                         )
                     }
 
-                    UserRole.PARTNER -> when (selectedTab) {
+                    DashboardRoute.DELIVERY_OFFERS -> when (selectedTab) {
                         0 -> PartnerOffersScreen(
                             online = partnerOnline,
                             offeredTasksState = offeredTasksState,
@@ -696,6 +948,7 @@ fun ClickitMainShell(
                             isBusy = isActionBusy,
                             onAdvanceTask = viewModel::partnerAdvanceTask,
                             onReportException = viewModel::partnerReportException,
+                            onUpdateLiveLocation = viewModel::updatePartnerTaskLocation,
                             onRetry = viewModel::retryStreams
                         )
                         2 -> PartnerEarningsScreen(partnerTasksState = partnerTasksState)
