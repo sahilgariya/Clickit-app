@@ -194,15 +194,11 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun `smart batch live map resolves coordinates, distance, ETA, and live agent GPS cleanly`() {
+    fun `smart batch live map resolves coordinates, projection, distance, ETA, and live agent GPS cleanly`() {
         assertTrue(com.example.data.isValidCoordinate(12.9716, 77.6412))
         assertFalse(com.example.data.isValidCoordinate(95.0, 77.6412))
         assertFalse(com.example.data.isValidCoordinate(12.9716, Double.NaN))
         assertFalse(com.example.data.isValidCoordinate(null, 77.6))
-
-        assertFalse(com.example.ui.components.isMapsApiKeyConfigured(""))
-        assertFalse(com.example.ui.components.isMapsApiKeyConfigured("YOUR_GOOGLE_MAPS_API_KEY"))
-        assertTrue(com.example.ui.components.isMapsApiKeyConfigured("AIzaSyTestExampleKey123456"))
 
         val booking = com.example.data.Booking(
             id = "bk_map_1",
@@ -231,6 +227,15 @@ class ExampleUnitTest {
         assertEquals(12.9760, liveTelemetry.agentPoint?.lat ?: 0.0, 0.0001)
         assertTrue(liveTelemetry.distanceKm > 0.2)
         assertTrue(liveTelemetry.etaMinutes >= 2)
+
+        val projected = com.example.ui.components.projectRoutePoints(
+            pickupPoint = liveTelemetry.pickupPoint,
+            dropPoint = liveTelemetry.dropPoint,
+            agentPoint = liveTelemetry.agentPoint
+        )
+        assertTrue(projected.pickup.xFraction in 0.1f..0.9f)
+        assertTrue(projected.drop.yFraction in 0.1f..0.9f)
+        assertTrue((projected.agent?.xFraction ?: 0f) in 0.1f..0.9f)
 
         val pendingTelemetry = com.example.ui.components.resolveSmartBatchRouteTelemetry(
             booking,

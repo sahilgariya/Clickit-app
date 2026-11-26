@@ -123,6 +123,7 @@ import com.example.ui.theme.ClickitPeachSoft
 import com.example.ui.theme.ClickitSlateDeep
 import com.example.ui.theme.ClickitTheme
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -131,6 +132,9 @@ import kotlinx.coroutines.launch
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (FirebaseApp.getApps(applicationContext).isEmpty()) {
+            FirebaseApp.initializeApp(applicationContext)
+        }
         enableEdgeToEdge()
         setContent {
             ClickitTheme(darkTheme = true) {
@@ -161,6 +165,9 @@ fun ClickitAppRoot() {
     }
 
     val repository = remember(appContext) {
+        if (FirebaseApp.getApps(appContext).isEmpty()) {
+            FirebaseApp.initializeApp(appContext)
+        }
         val databaseId = appContext.getString(R.string.firestore_database_id)
         val db = FirebaseFirestore.getInstance(databaseId)
         ClickitRepository(db, appContext = appContext)
@@ -170,7 +177,7 @@ fun ClickitAppRoot() {
     val authRetryTrigger = remember { MutableStateFlow(0) }
 
     val initialDestination = remember {
-        val existing = Firebase.auth.currentUser
+        val existing = runCatching { Firebase.auth.currentUser }.getOrNull()
         if (existing != null) AuthDestination.EvaluatingRole(existing.uid) else AuthDestination.Unauthenticated
     }
     val authDestination by remember(authHandler) {
