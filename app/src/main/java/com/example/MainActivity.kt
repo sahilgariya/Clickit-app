@@ -564,7 +564,7 @@ fun ClickitMainShell(
                 prefillBookingForReorder = null
                 viewModel.selectShop(null)
             },
-            onSubmitBooking = { svc, qty, weight, fulfilment, slotIdx, batchOptIn, addr, notes ->
+            onSubmitBooking = { svc, qty, weight, fulfilment, slotIdx, batchOptIn, addr, notes, urgent ->
                 viewModel.createBooking(
                     customerName = profile.displayName,
                     shop = shop,
@@ -576,6 +576,7 @@ fun ClickitMainShell(
                     batchOptIn = batchOptIn,
                     address = addr,
                     itemNotes = notes,
+                    urgentService = urgent,
                     onCreated = {
                         activeShopForBooking = null
                         prefillBookingForReorder = null

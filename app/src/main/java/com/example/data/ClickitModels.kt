@@ -327,6 +327,62 @@ val DefaultPickupSlots = listOf(
     )
 )
 
+const val FREE_DELIVERY_WEIGHT_THRESHOLD_KG = 5.0
+const val PLATFORM_FEE_MINOR = 100L
+const val URGENT_SERVICE_SURCHARGE_RATE = 0.25
+
+data class BookingFeeQuote(
+    val baseServiceSubtotalMinor: Long,
+    val emergencySurchargeMinor: Long,
+    val serviceSubtotalMinor: Long,
+    val deliveryFeeMinor: Long,
+    val originalDeliveryFeeMinor: Long,
+    val platformFeeMinor: Long,
+    val totalMinor: Long,
+    val isFreeDeliveryByWeight: Boolean,
+    val isUrgentService: Boolean
+)
+
+fun calculateBookingFees(
+    unitPriceMinor: Long,
+    quantity: Int,
+    weightKg: Double,
+    fulfilment: FulfilmentMethod,
+    batchOptIn: Boolean,
+    batchEligible: Boolean,
+    urgentService: Boolean = false
+): BookingFeeQuote {
+    val safeQty = quantity.coerceAtLeast(1)
+    val baseSubtotal = unitPriceMinor * safeQty.toLong()
+    val emergencySurcharge = if (urgentService) {
+        kotlin.math.round(baseSubtotal * URGENT_SERVICE_SURCHARGE_RATE).toLong()
+    } else {
+        0L
+    }
+    val serviceSubtotal = baseSubtotal + emergencySurcharge
+    val baseDeliveryFee = when (fulfilment) {
+        FulfilmentMethod.SHOP_DROP -> 0L
+        FulfilmentMethod.WORKER_DELIVERY -> 2500L
+        FulfilmentMethod.CLICKIT_PICKUP_RETURN -> {
+            val perCloth = safeQty.toLong() * 200L
+            if (batchOptIn && batchEligible) perCloth.coerceAtLeast(1000L) else 2500L
+        }
+    }
+    val freeByWeight = fulfilment != FulfilmentMethod.SHOP_DROP && weightKg > FREE_DELIVERY_WEIGHT_THRESHOLD_KG
+    val effectiveDeliveryFee = if (freeByWeight) 0L else baseDeliveryFee
+    return BookingFeeQuote(
+        baseServiceSubtotalMinor = baseSubtotal,
+        emergencySurchargeMinor = emergencySurcharge,
+        serviceSubtotalMinor = serviceSubtotal,
+        deliveryFeeMinor = effectiveDeliveryFee,
+        originalDeliveryFeeMinor = baseDeliveryFee,
+        platformFeeMinor = PLATFORM_FEE_MINOR,
+        totalMinor = serviceSubtotal + effectiveDeliveryFee + PLATFORM_FEE_MINOR,
+        isFreeDeliveryByWeight = freeByWeight,
+        isUrgentService = urgentService
+    )
+}
+
 fun formatInr(minorUnits: Long): String {
     val rupees = minorUnits / 100.0
     val indiaLocale = Locale.Builder().setLanguage("en").setRegion("IN").build()

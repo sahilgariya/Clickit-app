@@ -370,6 +370,7 @@ class ClickitViewModel(
         batchOptIn: Boolean,
         address: SavedAddress?,
         itemNotes: String,
+        urgentService: Boolean = false,
         onCreated: (String) -> Unit
     ) {
         viewModelScope.launch {
@@ -384,7 +385,8 @@ class ClickitViewModel(
                 slotOption = slotOption,
                 batchOptIn = batchOptIn,
                 address = address,
-                itemNotes = itemNotes
+                itemNotes = itemNotes,
+                urgentService = urgentService
             )
             _isActionBusy.value = false
             res.onSuccess { bookingId ->

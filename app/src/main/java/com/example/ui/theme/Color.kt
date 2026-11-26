@@ -2,27 +2,27 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Clickit – Home Affairs Brand Palette
-val ClickitMidnight = Color(0xFF181A2F)       // Primary canvas & deep midnight navy
-val ClickitSlateDeep = Color(0xFF242E49)      // Elevated cards & secondary surface
-val ClickitSlate = Color(0xFF37415C)          // Borders, tonal chips, muted surface
+// Clickit – Refined Minimal Dark Palette (WhatsApp / Modern Consumer Polish)
+val ClickitMidnight = Color(0xFF0E131F)       // Primary calm obsidian-navy canvas
+val ClickitSlateDeep = Color(0xFF171E2E)      // Elevated cards & clean secondary surface
+val ClickitSlate = Color(0xFF252E44)          // Subtle borders, tonal chips, pressed surface
 val ClickitPeach = Color(0xFFFDA481)          // Primary CTA & warm signature accent
-val ClickitPeachSoft = Color(0xFFFFD5C2)      // Soft peach text/highlight
-val ClickitCrimson = Color(0xFFB4182D)        // Destructive, urgent alerts, errors
-val ClickitBurgundy = Color(0xFF54162B)       // Alert containers & rich accent badges
+val ClickitPeachSoft = Color(0xFFFFD8C7)      // Soft peach text/highlight
+val ClickitCrimson = Color(0xFFE0485A)        // Destructive, urgent alerts, errors
+val ClickitBurgundy = Color(0xFF3A1A29)       // Soft alert containers & subtle accent badges
 
 // Semantic & Surface Neutrals
-val ClickitIvory = Color(0xFFF7F5F2)          // High-contrast primary text on dark
-val ClickitMutedText = Color(0xFFB5BDD1)      // Secondary body/caption text on dark
-val ClickitSubtleLine = Color(0xFF45506E)     // Hairline dividers on dark cards
-val ClickitSuccess = Color(0xFF4ADE80)        // Verified / completed status green
-val ClickitSuccessContainer = Color(0xFF163829)
+val ClickitIvory = Color(0xFFF5F7FA)          // Crisp high-contrast primary text on dark
+val ClickitMutedText = Color(0xFF9BA5BD)      // Calm secondary body/caption text
+val ClickitSubtleLine = Color(0xFF2B354D)     // Hairline dividers on dark cards
+val ClickitSuccess = Color(0xFF3DDC84)        // Verified / Free delivery / completed green
+val ClickitSuccessContainer = Color(0xFF123225)
 val ClickitWarning = Color(0xFFFBBF24)        // Quote pending / amber warning
-val ClickitWarningContainer = Color(0xFF3B2C12)
-val ClickitInfo = Color(0xFF7DD3FC)           // Smart Batch / in-transit cyan
-val ClickitInfoContainer = Color(0xFF133349)
+val ClickitWarningContainer = Color(0xFF332610)
+val ClickitInfo = Color(0xFF60C8FA)           // Smart Batch / in-transit sky cyan
+val ClickitInfoContainer = Color(0xFF112C3E)
 
 // Light fallback palette (maintaining Clickit brand anchors)
-val ClickitLightBg = Color(0xFFF8F6F3)
+val ClickitLightBg = Color(0xFFF8F9FB)
 val ClickitLightSurface = Color(0xFFFFFFFF)
-val ClickitLightSurfaceVar = Color(0xFFECEEF4)
+val ClickitLightSurfaceVar = Color(0xFFECEFF5)

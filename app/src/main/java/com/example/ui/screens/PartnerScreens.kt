@@ -7,6 +7,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -57,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.example.data.Booking
 import com.example.data.BookingStatus
 import com.example.data.DeliveryTask
+import com.example.data.FREE_DELIVERY_WEIGHT_THRESHOLD_KG
 import com.example.data.LiveLocationTracker
 import com.example.data.formatInr
 import com.example.ui.UiState
@@ -68,6 +71,7 @@ import com.example.ui.components.SmartBatchLiveMap
 import com.example.ui.theme.ClickitBurgundy
 import com.example.ui.theme.ClickitCrimson
 import com.example.ui.theme.ClickitInfo
+import com.example.ui.theme.ClickitInfoContainer
 import com.example.ui.theme.ClickitIvory
 import com.example.ui.theme.ClickitMidnight
 import com.example.ui.theme.ClickitMutedText
@@ -77,6 +81,9 @@ import com.example.ui.theme.ClickitSlate
 import com.example.ui.theme.ClickitSlateDeep
 import com.example.ui.theme.ClickitSubtleLine
 import com.example.ui.theme.ClickitSuccess
+import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitWarning
+import com.example.ui.theme.ClickitWarningContainer
 
 @Composable
 fun PartnerOffersScreen(
@@ -174,7 +181,8 @@ fun PartnerOffersScreen(
                         items(offeredTasksState.data, key = { it.id }) { task ->
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                                border = BorderStroke(1.dp, ClickitInfo.copy(alpha = 0.5f)),
+                                border = BorderStroke(1.dp, ClickitSubtleLine),
+                                shape = RoundedCornerShape(16.dp),
                                 modifier = Modifier.fillMaxWidth().testTag("task_offer_${task.id}")
                             ) {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -183,13 +191,25 @@ fun PartnerOffersScreen(
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Surface(color = ClickitMidnight, shape = RoundedCornerShape(8.dp)) {
-                                            Text(
-                                                text = "${task.taskType.uppercase()} • ${task.batchId}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = ClickitInfo,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                            )
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(color = ClickitMidnight, shape = RoundedCornerShape(8.dp)) {
+                                                Text(
+                                                    text = "${task.taskType.uppercase()} • ${task.batchId}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = ClickitInfo,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                            if (task.estimatedWeightKg > FREE_DELIVERY_WEIGHT_THRESHOLD_KG) {
+                                                Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                                                    Text(
+                                                        text = ">5 KG BULK",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = ClickitSuccess,
+                                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                            }
                                         }
                                         Text(
                                             text = "Payout ${formatInr(task.payoutMinor)}",
@@ -223,6 +243,7 @@ fun PartnerOffersScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PartnerRouteScreen(
     partnerTasksState: UiState<List<DeliveryTask>>,
@@ -484,14 +505,50 @@ fun PartnerRouteScreen(
 
                     items(active, key = { it.id }) { task ->
                         val linkedBooking = bookings.firstOrNull { it.id == task.bookingId }
+                        val isHeavyBulk = (linkedBooking?.weightKg ?: task.estimatedWeightKg) > FREE_DELIVERY_WEIGHT_THRESHOLD_KG
+                        val isUrgent = linkedBooking?.itemsSummary?.contains("URGENT +25%", ignoreCase = true) == true
                         Card(
                             colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                            border = BorderStroke(1.dp, ClickitPeach)
+                            border = BorderStroke(1.dp, ClickitSubtleLine),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
                             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("Stop ${task.batchStopIndex} • ${task.parcelCode}", style = MaterialTheme.typography.titleSmall, color = ClickitPeach)
                                     Text(task.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = ClickitInfo)
+                                }
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Surface(color = ClickitInfoContainer, shape = RoundedCornerShape(8.dp)) {
+                                        Text(
+                                            text = "Scan QR & Check OTP",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = ClickitInfo,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                    if (isUrgent) {
+                                        Surface(color = ClickitWarningContainer, shape = RoundedCornerShape(8.dp)) {
+                                            Text(
+                                                text = "URGENT +25%",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = ClickitWarning,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                    if (isHeavyBulk) {
+                                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                                            Text(
+                                                text = "FREE >5 KG BULK",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = ClickitSuccess,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
                                 }
                                 Text("${task.taskType.replaceFirstChar { it.uppercase() }}: ${task.pickupZone} -> ${task.dropZone}", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
                                 if (linkedBooking != null) {

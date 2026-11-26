@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Payment
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.SupportAgent
@@ -60,6 +63,7 @@ import com.example.data.Booking
 import com.example.data.BookingStatus
 import com.example.data.BookingTimelineEvent
 import com.example.data.DeliveryTask
+import com.example.data.FREE_DELIVERY_WEIGHT_THRESHOLD_KG
 import com.example.data.FulfilmentMethod
 import com.example.data.formatInr
 import com.example.ui.UiState
@@ -68,11 +72,13 @@ import com.example.ui.components.CategoryBadge
 import com.example.ui.components.DestructiveConfirmDialog
 import com.example.ui.components.EmptyStateCard
 import com.example.ui.components.ErrorRetryCard
+import com.example.ui.components.GarmentScanTagCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.OtpCustodyCard
 import com.example.ui.components.PriceBreakdownCard
 import com.example.ui.components.SmartBatchLiveMap
 import com.example.ui.components.SmartBatchVisualTracker
+import com.example.ui.components.TrustProtectionStrip
 import com.example.ui.theme.ClickitBurgundy
 import com.example.ui.theme.ClickitCrimson
 import com.example.ui.theme.ClickitInfo
@@ -83,7 +89,9 @@ import com.example.ui.theme.ClickitPeach
 import com.example.ui.theme.ClickitPeachSoft
 import com.example.ui.theme.ClickitSlate
 import com.example.ui.theme.ClickitSlateDeep
+import com.example.ui.theme.ClickitSubtleLine
 import com.example.ui.theme.ClickitSuccess
+import com.example.ui.theme.ClickitSuccessContainer
 import com.example.ui.theme.ClickitWarning
 
 @Composable
@@ -189,9 +197,13 @@ fun CustomerBookingsScreen(
 
 @Composable
 private fun CustomerBookingCard(booking: Booking, onClick: () -> Unit) {
+    val freeByWeight = booking.weightKg > FREE_DELIVERY_WEIGHT_THRESHOLD_KG &&
+        booking.fulfilmentMethod != FulfilmentMethod.SHOP_DROP.key &&
+        booking.deliveryFeeMinor == 0L
     Card(
         colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSlate),
+        border = BorderStroke(1.dp, ClickitSubtleLine),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("customer_booking_${booking.id}")
@@ -206,6 +218,16 @@ private fun CustomerBookingCard(booking: Booking, onClick: () -> Unit) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     CategoryBadge(booking.category)
                     Text(booking.parcelCode, style = MaterialTheme.typography.labelMedium, color = ClickitPeach)
+                    if (freeByWeight) {
+                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                            Text(
+                                text = "FREE >5 KG",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ClickitSuccess,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
                 BookingStatusBadge(booking.status)
             }
@@ -226,7 +248,7 @@ private fun CustomerBookingCard(booking: Booking, onClick: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CustomerBookingDetailSheet(
     booking: Booking,
@@ -297,6 +319,15 @@ fun CustomerBookingDetailSheet(
                 )
             }
 
+            GarmentScanTagCard(
+                parcelCode = booking.parcelCode,
+                itemCount = booking.itemCount,
+                weightKg = booking.weightKg,
+                slotWindowLabel = booking.slotWindowLabel,
+                isUrgent = booking.itemsSummary.contains("URGENT +25%", ignoreCase = true),
+                isDelayed = booking.milestone.contains("Delay", ignoreCase = true)
+            )
+
             if (status.isActive() && (booking.fulfilmentMethod == FulfilmentMethod.CLICKIT_PICKUP_RETURN.key || deliveryTask != null)) {
                 SmartBatchLiveMap(
                     booking = booking,
@@ -358,13 +389,22 @@ fun CustomerBookingDetailSheet(
                 )
             }
 
+            val isFreeByWeight = booking.weightKg > FREE_DELIVERY_WEIGHT_THRESHOLD_KG &&
+                booking.fulfilmentMethod != FulfilmentMethod.SHOP_DROP.key &&
+                booking.deliveryFeeMinor == 0L
+            val isUrgentOrder = booking.itemsSummary.contains("URGENT +25%", ignoreCase = true)
+
             PriceBreakdownCard(
                 serviceSubtotalMinor = booking.serviceSubtotalMinor,
                 deliveryFeeMinor = booking.deliveryFeeMinor,
                 platformFeeMinor = booking.platformFeeMinor,
                 totalMinor = booking.totalMinor,
-                quoteStatus = booking.quoteStatus
+                quoteStatus = booking.quoteStatus,
+                isFreeDeliveryByWeight = isFreeByWeight,
+                isUrgentService = isUrgentOrder
             )
+
+            TrustProtectionStrip(compact = true)
 
             if (booking.paymentStatus == "pending" && status != BookingStatus.CANCELLED) {
                 Button(
@@ -489,6 +529,25 @@ fun CustomerBookingDetailSheet(
                 }
             }
 
+            if (status in listOf(BookingStatus.DELIVERED, BookingStatus.COMPLETED)) {
+                OutlinedButton(
+                    onClick = {
+                        onReportIssue("Re-Service Request: Free touch-up / re-press requested for ${booking.parcelCode}")
+                    },
+                    enabled = !isBusy,
+                    border = BorderStroke(1.dp, ClickitSuccess.copy(alpha = 0.65f)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("request_reservice_button")
+                ) {
+                    Icon(Icons.Filled.Replay, contentDescription = null, tint = ClickitSuccess, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Request Free Re-Service / Touch-Up", color = ClickitSuccess)
+                }
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (status in listOf(BookingStatus.REQUESTED, BookingStatus.ACCEPTED, BookingStatus.QUOTE_PENDING, BookingStatus.CONFIRMED, BookingStatus.PICKUP_SCHEDULED)) {
                     OutlinedButton(
@@ -501,7 +560,7 @@ fun CustomerBookingDetailSheet(
                 }
                 OutlinedButton(
                     onClick = { showIssueBox = !showIssueBox },
-                    border = BorderStroke(1.dp, ClickitSlate),
+                    border = BorderStroke(1.dp, ClickitSubtleLine),
                     modifier = Modifier.weight(1f).testTag("support_booking_button")
                 ) {
                     Icon(Icons.Filled.SupportAgent, contentDescription = null, tint = ClickitPeach, modifier = Modifier.size(18.dp))
@@ -511,6 +570,36 @@ fun CustomerBookingDetailSheet(
             }
 
             if (showIssueBox) {
+                val quickIssues = listOf(
+                    "Re-press / Touch-up",
+                    "Missing item check",
+                    "Delivery timing",
+                    "Billing question"
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    quickIssues.forEach { preset ->
+                        val selected = issueText.startsWith(preset)
+                        FilterChip(
+                            selected = selected,
+                            onClick = { issueText = "$preset for ${booking.parcelCode}" },
+                            label = { Text(preset, style = MaterialTheme.typography.labelSmall) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = ClickitPeach,
+                                selectedLabelColor = ClickitMidnight,
+                                containerColor = ClickitSlateDeep,
+                                labelColor = ClickitMutedText
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selected,
+                                borderColor = ClickitSubtleLine
+                            )
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = issueText,
                     onValueChange = { issueText = it },
@@ -518,7 +607,7 @@ fun CustomerBookingDetailSheet(
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = ClickitPeach,
-                        unfocusedBorderColor = ClickitSlate,
+                        unfocusedBorderColor = ClickitSubtleLine,
                         focusedTextColor = ClickitIvory,
                         unfocusedTextColor = ClickitIvory
                     )

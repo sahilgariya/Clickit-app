@@ -59,6 +59,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.Booking
 import com.example.data.BookingStatus
+import com.example.data.FREE_DELIVERY_WEIGHT_THRESHOLD_KG
+import com.example.data.FulfilmentMethod
 import com.example.data.ServiceCategory
 import com.example.data.Shop
 import com.example.data.ShopService
@@ -74,6 +76,7 @@ import com.example.ui.components.NeonIconBadge
 import com.example.ui.theme.ClickitBurgundy
 import com.example.ui.theme.ClickitCrimson
 import com.example.ui.theme.ClickitInfo
+import com.example.ui.theme.ClickitInfoContainer
 import com.example.ui.theme.ClickitIvory
 import com.example.ui.theme.ClickitMidnight
 import com.example.ui.theme.ClickitMutedText
@@ -83,7 +86,9 @@ import com.example.ui.theme.ClickitSlate
 import com.example.ui.theme.ClickitSlateDeep
 import com.example.ui.theme.ClickitSubtleLine
 import com.example.ui.theme.ClickitSuccess
+import com.example.ui.theme.ClickitSuccessContainer
 import com.example.ui.theme.ClickitWarning
+import com.example.ui.theme.ClickitWarningContainer
 
 @Composable
 fun WorkerDashboardScreen(
@@ -125,7 +130,8 @@ fun WorkerDashboardScreen(
             item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.5f))
+                    border = BorderStroke(1.dp, ClickitSubtleLine),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
@@ -249,7 +255,8 @@ private fun WorkerMetricCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSlate),
+        border = BorderStroke(1.dp, ClickitSubtleLine),
+        shape = RoundedCornerShape(16.dp),
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -414,9 +421,17 @@ private fun WorkerJobCard(
     onMarkReady: () -> Unit
 ) {
     val st = BookingStatus.fromRaw(booking.status)
+    val isFreeBulk = booking.weightKg > FREE_DELIVERY_WEIGHT_THRESHOLD_KG &&
+        booking.fulfilmentMethod != FulfilmentMethod.SHOP_DROP.key &&
+        booking.deliveryFeeMinor == 0L
+    val isUrgent = booking.itemsSummary.contains("URGENT +25%", ignoreCase = true)
+    var checkedQcTags by remember(booking.id) { mutableStateOf(setOf<String>()) }
+    val qcItems = listOf("QR Tagged", "Condition Logged", "Stains Noted", "Tamper-Sealed")
+
     Card(
         colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSlate),
+        border = BorderStroke(1.dp, ClickitSubtleLine),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth().testTag("worker_job_${booking.id}")
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -425,9 +440,29 @@ private fun WorkerJobCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CategoryBadge(booking.category)
                     Text(booking.parcelCode, style = MaterialTheme.typography.titleSmall, color = ClickitPeach)
+                    if (isUrgent) {
+                        Surface(color = ClickitWarningContainer, shape = RoundedCornerShape(8.dp)) {
+                            Text(
+                                text = "URGENT +25%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ClickitWarning,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    if (isFreeBulk) {
+                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                            Text(
+                                text = "FREE >5 KG",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ClickitSuccess,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
                 BookingStatusBadge(booking.status)
             }
@@ -435,7 +470,7 @@ private fun WorkerJobCard(
             Text("${booking.customerName} • ${booking.shopName}", style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
             Text(booking.itemsSummary, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
             Text(
-                text = "Worker Share: ${formatInr(booking.serviceSubtotalMinor)} • Slot: ${booking.slotWindowLabel}",
+                text = "${booking.itemCount} pcs • ${booking.weightKg} kg • Worker Share: ${formatInr(booking.serviceSubtotalMinor)} • ${booking.slotWindowLabel}",
                 style = MaterialTheme.typography.labelMedium,
                 color = ClickitPeachSoft
             )
@@ -463,6 +498,30 @@ private fun WorkerJobCard(
                     }
                 }
                 BookingStatus.CONFIRMED, BookingStatus.PICKUP_SCHEDULED, BookingStatus.PICKED_UP -> {
+                    Text("Intake & QC Check", style = MaterialTheme.typography.labelSmall, color = ClickitMutedText)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        qcItems.forEach { qc ->
+                            val selected = qc in checkedQcTags
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    checkedQcTags = if (selected) checkedQcTags - qc else checkedQcTags + qc
+                                },
+                                label = { Text(qc, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ClickitSuccessContainer,
+                                    selectedLabelColor = ClickitSuccess,
+                                    containerColor = ClickitMidnight,
+                                    labelColor = ClickitMutedText
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selected,
+                                    borderColor = ClickitSubtleLine
+                                )
+                            )
+                        }
+                    }
                     Button(
                         onClick = onReceiveItems,
                         enabled = !isBusy,
@@ -477,16 +536,53 @@ private fun WorkerJobCard(
                         ServiceCategory.LAUNDRY -> listOf("Sorting & Pre-treat", "Washing / Steam Press", "Quality Check")
                         ServiceCategory.TAILORING -> listOf("Measuring & Marking", "Stitching & Overlock", "Steam Finish")
                         ServiceCategory.FOOTWEAR -> listOf("Deep Scrub & Prep", "Sole Bond / Repair", "Polish & QC")
-                    }
+                    } + listOf("Delay Flagged • New ETA shared")
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         milestones.forEach { step ->
+                            val isDelayFlag = step.startsWith("Delay")
                             FilterChip(
                                 selected = booking.milestone == step,
                                 onClick = { onUpdateMilestone(step) },
-                                label = { Text(step, style = MaterialTheme.typography.labelSmall) },
+                                label = {
+                                    Text(
+                                        text = if (isDelayFlag) "Flag Delay" else step,
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = ClickitInfo,
-                                    selectedLabelColor = ClickitMidnight
+                                    selectedContainerColor = if (isDelayFlag) ClickitWarningContainer else ClickitInfoContainer,
+                                    selectedLabelColor = if (isDelayFlag) ClickitWarning else ClickitInfo,
+                                    containerColor = ClickitMidnight,
+                                    labelColor = if (isDelayFlag) ClickitWarning else ClickitMutedText
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = booking.milestone == step,
+                                    borderColor = if (isDelayFlag) ClickitWarning.copy(alpha = 0.45f) else ClickitSubtleLine
+                                )
+                            )
+                        }
+                    }
+                    Text("Pre-Seal QC Checklist", style = MaterialTheme.typography.labelSmall, color = ClickitMutedText)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        qcItems.forEach { qc ->
+                            val selected = qc in checkedQcTags
+                            FilterChip(
+                                selected = selected,
+                                onClick = {
+                                    checkedQcTags = if (selected) checkedQcTags - qc else checkedQcTags + qc
+                                },
+                                label = { Text(qc, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ClickitSuccessContainer,
+                                    selectedLabelColor = ClickitSuccess,
+                                    containerColor = ClickitMidnight,
+                                    labelColor = ClickitMutedText
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selected,
+                                    borderColor = ClickitSubtleLine
                                 )
                             )
                         }

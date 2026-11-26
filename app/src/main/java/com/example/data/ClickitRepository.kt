@@ -1016,21 +1016,24 @@ class ClickitRepository(
         slotOption: PickupSlotOption,
         batchOptIn: Boolean,
         address: SavedAddress?,
-        itemNotes: String
+        itemNotes: String,
+        urgentService: Boolean = false
     ): Result<String> = try {
         val uid = requireUserId()
         require(quantity in 1..500) { "Quantity must be 1–500." }
-        val serviceSubtotal = service.priceMinor * quantity.toLong()
-        val deliveryFee = when (fulfilment) {
-            FulfilmentMethod.SHOP_DROP -> 0L
-            FulfilmentMethod.WORKER_DELIVERY -> 2500L
-            FulfilmentMethod.CLICKIT_PICKUP_RETURN -> {
-                val perCloth = quantity.toLong() * 200L
-                if (batchOptIn && slotOption.batchEligible) perCloth.coerceAtLeast(1000L) else 2500L
-            }
-        }
-        val platformFee = 100L // ₹1 platform coordination fee
-        val total = serviceSubtotal + deliveryFee + platformFee
+        val feeQuote = calculateBookingFees(
+            unitPriceMinor = service.priceMinor,
+            quantity = quantity,
+            weightKg = weightKg,
+            fulfilment = fulfilment,
+            batchOptIn = batchOptIn,
+            batchEligible = slotOption.batchEligible,
+            urgentService = urgentService
+        )
+        val serviceSubtotal = feeQuote.serviceSubtotalMinor
+        val deliveryFee = feeQuote.deliveryFeeMinor
+        val platformFee = feeQuote.platformFeeMinor
+        val total = feeQuote.totalMinor
 
         val parcelCode = "CLK-${Random.nextInt(1000, 9999)}"
         val handoverOtp = Random.nextInt(1000, 9999).toString()
@@ -1040,7 +1043,8 @@ class ClickitRepository(
         val bookingId = bookingRef.id
         val addrLabel = address?.label ?: "Self Drop"
         val addrSummary = address?.formattedSummary()?.ifBlank { shop.addressSummary } ?: shop.addressSummary
-        val itemsSummary = "${quantity} × ${service.name} (${formatInr(service.priceMinor)}/${service.unit})" +
+        val urgentPrefix = if (urgentService) "[URGENT +25%] " else ""
+        val itemsSummary = "$urgentPrefix${quantity} × ${service.name} (${formatInr(service.priceMinor)}/${service.unit})" +
             if (itemNotes.isNotBlank()) " • ${itemNotes.trim()}" else ""
 
         val bookingPayload = mapOf(
@@ -1069,13 +1073,15 @@ class ClickitRepository(
             "platformFeeMinor" to platformFee,
             "totalMinor" to total,
             "paymentStatus" to "pending",
-            "milestone" to "Awaiting worker confirmation",
+            "milestone" to if (urgentService) "Urgent pickup • Awaiting worker" else "Awaiting worker confirmation",
             "ratingStars" to 0L,
             "createdAt" to FieldValue.serverTimestamp(),
             "updatedAt" to FieldValue.serverTimestamp()
         )
         bookingRef.set(bookingPayload).await()
 
+        val freeDeliveryNote = if (feeQuote.isFreeDeliveryByWeight) " • Free Delivery (>5 kg)" else ""
+        val urgentNote = if (urgentService) " • Emergency (+25%)" else ""
         addTimelineAndNotify(
             bookingId = bookingId,
             customerId = uid,
@@ -1083,10 +1089,10 @@ class ClickitRepository(
             actorId = uid,
             actorRole = "customer",
             status = BookingStatus.REQUESTED.key,
-            title = "Booking Submitted",
-            detail = "$itemsSummary • ${fulfilment.label}",
+            title = if (urgentService) "Urgent Booking Submitted" else "Booking Submitted",
+            detail = "$itemsSummary • ${fulfilment.label}$freeDeliveryNote$urgentNote",
             notifyUserId = shop.ownerId,
-            notifyTitle = "New Order ($parcelCode)",
+            notifyTitle = if (urgentService) "Urgent Order ($parcelCode)" else "New Order ($parcelCode)",
             notifyCategory = "booking"
         )
 

@@ -245,5 +245,89 @@ class ExampleUnitTest {
         assertEquals(null, pendingTelemetry.agentPoint)
         assertEquals(12.9716, pendingTelemetry.pickupPoint.lat, 0.0001)
     }
+
+    @Test
+    fun `calculateBookingFees unlocks free delivery strictly above 5kg for delivery fulfilments`() {
+        val standardBatch = com.example.data.calculateBookingFees(
+            unitPriceMinor = 1500L,
+            quantity = 6,
+            weightKg = 3.0,
+            fulfilment = FulfilmentMethod.CLICKIT_PICKUP_RETURN,
+            batchOptIn = true,
+            batchEligible = true
+        )
+        assertFalse(standardBatch.isFreeDeliveryByWeight)
+        assertEquals(1200L, standardBatch.deliveryFeeMinor)
+        assertEquals(1200L, standardBatch.originalDeliveryFeeMinor)
+        assertEquals(9000L + 1200L + 100L, standardBatch.totalMinor)
+
+        val exactBoundary = com.example.data.calculateBookingFees(
+            unitPriceMinor = 1500L,
+            quantity = 10,
+            weightKg = 5.0,
+            fulfilment = FulfilmentMethod.WORKER_DELIVERY,
+            batchOptIn = false,
+            batchEligible = false
+        )
+        assertFalse(exactBoundary.isFreeDeliveryByWeight)
+        assertEquals(2500L, exactBoundary.deliveryFeeMinor)
+
+        val justOverThreshold = com.example.data.calculateBookingFees(
+            unitPriceMinor = 1500L,
+            quantity = 10,
+            weightKg = 5.1,
+            fulfilment = FulfilmentMethod.CLICKIT_PICKUP_RETURN,
+            batchOptIn = true,
+            batchEligible = true
+        )
+        assertTrue(justOverThreshold.isFreeDeliveryByWeight)
+        assertEquals(0L, justOverThreshold.deliveryFeeMinor)
+        assertEquals(2000L, justOverThreshold.originalDeliveryFeeMinor)
+        assertEquals(15000L + 100L, justOverThreshold.totalMinor)
+
+        val heavyWorkerDelivery = com.example.data.calculateBookingFees(
+            unitPriceMinor = 2000L,
+            quantity = 8,
+            weightKg = 7.5,
+            fulfilment = FulfilmentMethod.WORKER_DELIVERY,
+            batchOptIn = false,
+            batchEligible = true
+        )
+        assertTrue(heavyWorkerDelivery.isFreeDeliveryByWeight)
+        assertEquals(0L, heavyWorkerDelivery.deliveryFeeMinor)
+        assertEquals(2500L, heavyWorkerDelivery.originalDeliveryFeeMinor)
+        assertEquals(16000L + 100L, heavyWorkerDelivery.totalMinor)
+
+        val shopDropHeavy = com.example.data.calculateBookingFees(
+            unitPriceMinor = 1500L,
+            quantity = 12,
+            weightKg = 7.5,
+            fulfilment = FulfilmentMethod.SHOP_DROP,
+            batchOptIn = false,
+            batchEligible = false
+        )
+        assertFalse(shopDropHeavy.isFreeDeliveryByWeight)
+        assertEquals(0L, shopDropHeavy.deliveryFeeMinor)
+        assertEquals(0L, shopDropHeavy.originalDeliveryFeeMinor)
+
+        val urgentHeavyBundle = com.example.data.calculateBookingFees(
+            unitPriceMinor = 2000L,
+            quantity = 10,
+            weightKg = 6.0,
+            fulfilment = FulfilmentMethod.CLICKIT_PICKUP_RETURN,
+            batchOptIn = true,
+            batchEligible = true,
+            urgentService = true
+        )
+        assertTrue(urgentHeavyBundle.isUrgentService)
+        assertTrue(urgentHeavyBundle.isFreeDeliveryByWeight)
+        assertEquals(20000L, urgentHeavyBundle.baseServiceSubtotalMinor)
+        assertEquals(5000L, urgentHeavyBundle.emergencySurchargeMinor)
+        assertEquals(25000L, urgentHeavyBundle.serviceSubtotalMinor)
+        assertEquals(0L, urgentHeavyBundle.deliveryFeeMinor)
+        assertEquals(25000L + 100L, urgentHeavyBundle.totalMinor)
+    }
 }
+
+
 

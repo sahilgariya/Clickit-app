@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,13 +21,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -49,6 +54,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -151,16 +158,10 @@ fun NeonIconBadge(
         modifier = modifier
             .size(size)
             .clip(shape)
-            .background(
-                Brush.radialGradient(
-                    listOf(glowColor.copy(alpha = 0.22f), ClickitSlateDeep, ClickitMidnight)
-                )
-            )
+            .background(glowColor.copy(alpha = 0.14f))
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(glowColor.copy(alpha = 0.7f), ClickitSlate, ClickitInfo.copy(alpha = 0.35f))
-                ),
+                color = glowColor.copy(alpha = 0.28f),
                 shape = shape
             ),
         contentAlignment = Alignment.Center
@@ -185,7 +186,7 @@ fun ClickitTopHeader(
 ) {
     val subtitleText = when (activeRole) {
         UserRole.CUSTOMER -> localityLabel.ifBlank { "Nearby services" }
-        UserRole.WORKER -> "Shop Owner • ${localityLabel.ifBlank { "My Shop" }}"
+        UserRole.WORKER -> "Shopper • ${localityLabel.ifBlank { "My Shop" }}"
         UserRole.PARTNER -> "Delivery • ${localityLabel.ifBlank { "Active Zone" }}"
     }
     val roleChipLabel = when (activeRole) {
@@ -209,10 +210,10 @@ fun ClickitTopHeader(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    ClickitBrandLogoMark(size = 40.dp)
+                    ClickitBrandLogoMark(size = 36.dp)
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        ClickitWordmark(fontSizeSp = 19f)
+                        ClickitWordmark(fontSizeSp = 18f)
                         Text(
                             text = subtitleText,
                             style = MaterialTheme.typography.bodySmall,
@@ -231,7 +232,7 @@ fun ClickitTopHeader(
                         Surface(
                             color = ClickitSlateDeep,
                             shape = RoundedCornerShape(50),
-                            border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.55f)),
+                            border = BorderStroke(1.dp, ClickitSubtleLine),
                             modifier = Modifier
                                 .testTag("header_role_pill")
                                 .minimumInteractiveComponentSize()
@@ -240,7 +241,7 @@ fun ClickitTopHeader(
                             Text(
                                 text = roleChipLabel,
                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = ClickitPeach,
+                                color = ClickitPeachSoft,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                             )
                         }
@@ -261,19 +262,25 @@ fun ClickitTopHeader(
                                 }
                             }
                         ) {
-                            NeonIconBadge(
-                                icon = Icons.Filled.Notifications,
-                                tint = ClickitIvory,
-                                glowColor = if (unreadNotifications > 0) ClickitCrimson else ClickitInfo,
-                                size = 38.dp,
-                                iconSize = 19.dp,
-                                contentDescription = "Notifications"
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(ClickitSlateDeep),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Notifications,
+                                    contentDescription = "Notifications",
+                                    tint = ClickitIvory,
+                                    modifier = Modifier.size(19.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
-            HorizontalDivider(color = ClickitSubtleLine.copy(alpha = 0.65f))
+            HorizontalDivider(color = ClickitSubtleLine.copy(alpha = 0.55f))
         }
     }
 }
@@ -327,13 +334,17 @@ fun PriceBreakdownCard(
     platformFeeMinor: Long,
     totalMinor: Long,
     quoteStatus: String,
+    isFreeDeliveryByWeight: Boolean = false,
+    savedDeliveryMinor: Long = 0L,
+    emergencySurchargeMinor: Long = 0L,
+    isUrgentService: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val statusLabel = when (quoteStatus) {
         "confirmed" -> "Final"
         "quote_revision_sent" -> "Updated Quote"
-        "awaiting_worker_confirmation" -> "Estimated"
-        else -> "Estimated"
+        "awaiting_worker_confirmation" -> "Upfront Estimate"
+        else -> "Upfront Estimate"
     }
     val statusColor = when (quoteStatus) {
         "confirmed" -> ClickitSuccess
@@ -344,6 +355,7 @@ fun PriceBreakdownCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
         border = BorderStroke(1.dp, ClickitSubtleLine),
+        shape = RoundedCornerShape(16.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -352,11 +364,35 @@ fun PriceBreakdownCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Price Summary", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                Text("Upfront Price Summary", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
                 Text(statusLabel, style = MaterialTheme.typography.labelSmall, color = statusColor)
             }
-            PriceRow("Service", formatInr(serviceSubtotalMinor))
-            PriceRow("Delivery", if (deliveryFeeMinor == 0L) "₹0" else formatInr(deliveryFeeMinor))
+            if (emergencySurchargeMinor > 0L) {
+                val baseService = (serviceSubtotalMinor - emergencySurchargeMinor).coerceAtLeast(0L)
+                PriceRow("Service (Base)", formatInr(baseService))
+                PriceRow(
+                    label = "Emergency Service (+25%)",
+                    value = "+${formatInr(emergencySurchargeMinor)}",
+                    valueColor = ClickitWarning
+                )
+            } else {
+                PriceRow(
+                    label = if (isUrgentService) "Service (incl. +25% urgent)" else "Service",
+                    value = formatInr(serviceSubtotalMinor)
+                )
+            }
+            val deliveryLabel = when {
+                isFreeDeliveryByWeight && savedDeliveryMinor > 0L ->
+                    "FREE (5+ kg • Saved ${formatInr(savedDeliveryMinor)})"
+                isFreeDeliveryByWeight -> "FREE (5+ kg)"
+                deliveryFeeMinor == 0L -> "₹0"
+                else -> formatInr(deliveryFeeMinor)
+            }
+            PriceRow(
+                label = "Delivery",
+                value = deliveryLabel,
+                valueColor = if (deliveryFeeMinor == 0L) ClickitSuccess else ClickitIvory
+            )
             PriceRow("Platform fee", formatInr(platformFeeMinor))
             HorizontalDivider(color = ClickitSubtleLine)
             Row(
@@ -366,18 +402,187 @@ fun PriceBreakdownCard(
                 Text("Total", style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
                 Text(formatInr(totalMinor), style = MaterialTheme.typography.titleMedium, color = ClickitPeach)
             }
+            Text(
+                text = "We always ask before charging anything extra.",
+                style = MaterialTheme.typography.labelSmall,
+                color = ClickitMutedText
+            )
         }
     }
 }
 
 @Composable
-private fun PriceRow(label: String, value: String) {
+private fun PriceRow(
+    label: String,
+    value: String,
+    valueColor: Color = ClickitIvory
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
-        Text(value, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = ClickitIvory)
+        Text(value, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = valueColor)
+    }
+}
+
+@Composable
+fun TrustProtectionStrip(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
+) {
+    Surface(
+        color = ClickitSuccessContainer.copy(alpha = 0.65f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, ClickitSuccess.copy(alpha = 0.28f)),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = if (compact) 8.dp else 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.VerifiedUser,
+                contentDescription = "Clickit Reliability Guarantee",
+                tint = ClickitSuccess,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Clickit Reliability Guarantee",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = ClickitIvory
+                )
+                Text(
+                    text = "QR garment tags • Condition logged • Up to ₹2,000 cover • Free re-service",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ClickitMutedText
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun GarmentScanTagCard(
+    parcelCode: String,
+    itemCount: Long,
+    weightKg: Double,
+    slotWindowLabel: String,
+    isUrgent: Boolean = false,
+    isDelayed: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
+        border = BorderStroke(1.dp, if (isDelayed) ClickitWarning.copy(alpha = 0.65f) else ClickitSubtleLine),
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                color = ClickitIvory,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.size(64.dp)
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(6.dp)
+                ) {
+                    val grid = 9
+                    val cell = size.width / grid.toFloat()
+                    val seed = parcelCode.hashCode()
+                    for (r in 0 until grid) {
+                        for (c in 0 until grid) {
+                            val inTopLeft = r < 3 && c < 3
+                            val inTopRight = r < 3 && c >= grid - 3
+                            val inBottomLeft = r >= grid - 3 && c < 3
+                            val filled = when {
+                                inTopLeft || inTopRight || inBottomLeft -> {
+                                    val lr = if (r < 3) r else r - (grid - 3)
+                                    val lc = if (c < 3) c else c - (grid - 3)
+                                    lr == 0 || lr == 2 || lc == 0 || lc == 2 || (lr == 1 && lc == 1)
+                                }
+                                else -> (((seed ushr ((r * 3 + c) % 24)) + r * 7 + c * 11) and 1) == 0
+                            }
+                            if (filled) {
+                                drawRect(
+                                    color = Color(0xFF0E131F),
+                                    topLeft = Offset(c * cell, r * cell),
+                                    size = Size(cell * 0.92f, cell * 0.92f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.QrCode2,
+                        contentDescription = "QR garment tag",
+                        tint = ClickitInfo,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "QR Tag • $parcelCode",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                        color = ClickitIvory
+                    )
+                }
+                Text(
+                    text = "$itemCount items (${weightKg} kg) • Scanned at every handoff",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ClickitMutedText
+                )
+                Text(
+                    text = "Committed window: ${slotWindowLabel.ifBlank { "Scheduled" }}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isDelayed) ClickitWarning else ClickitInfo
+                )
+                if (isUrgent || isDelayed) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (isUrgent) {
+                            Surface(color = ClickitWarningContainer, shape = RoundedCornerShape(6.dp)) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(Icons.Filled.Bolt, contentDescription = null, tint = ClickitWarning, modifier = Modifier.size(12.dp))
+                                    Text("URGENT +25%", style = MaterialTheme.typography.labelSmall, color = ClickitWarning)
+                                }
+                            }
+                        }
+                        if (isDelayed) {
+                            Surface(color = ClickitBurgundy, shape = RoundedCornerShape(6.dp)) {
+                                Text(
+                                    text = "DELAY FLAGGED",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = ClickitPeachSoft,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

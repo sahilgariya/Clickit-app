@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,12 +22,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Replay
@@ -46,6 +52,7 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -53,6 +60,8 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -67,7 +76,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -76,25 +84,26 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.Booking
-import com.example.data.BookingStatus
 import com.example.data.DefaultPickupSlots
+import com.example.data.FREE_DELIVERY_WEIGHT_THRESHOLD_KG
 import com.example.data.FulfilmentMethod
 import com.example.data.SavedAddress
 import com.example.data.ServiceCategory
 import com.example.data.Shop
 import com.example.data.ShopService
+import com.example.data.calculateBookingFees
 import com.example.data.formatInr
 import com.example.ui.UiState
-import com.example.ui.components.BookingStatusBadge
 import com.example.ui.components.CategoryBadge
 import com.example.ui.components.EmptyStateCard
 import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
-import com.example.ui.components.NeonIconBadge
 import com.example.ui.components.PriceBreakdownCard
 import com.example.ui.components.SmartBatchCapacityBar
+import com.example.ui.components.TrustProtectionStrip
 import com.example.ui.theme.ClickitBurgundy
 import com.example.ui.theme.ClickitInfo
+import com.example.ui.theme.ClickitInfoContainer
 import com.example.ui.theme.ClickitIvory
 import com.example.ui.theme.ClickitMidnight
 import com.example.ui.theme.ClickitMutedText
@@ -104,6 +113,9 @@ import com.example.ui.theme.ClickitSlate
 import com.example.ui.theme.ClickitSlateDeep
 import com.example.ui.theme.ClickitSubtleLine
 import com.example.ui.theme.ClickitSuccess
+import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitWarning
+import com.example.ui.theme.ClickitWarningContainer
 
 fun filterShops(
     shops: List<Shop>,
@@ -176,7 +188,7 @@ fun CustomerHomeScreen(
                         Icon(
                             imageVector = Icons.Filled.Search,
                             contentDescription = "Search local service providers",
-                            tint = ClickitPeach
+                            tint = ClickitMutedText
                         )
                     },
                     trailingIcon = {
@@ -191,14 +203,14 @@ fun CustomerHomeScreen(
                     },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ClickitPeach,
-                        unfocusedBorderColor = ClickitSlate,
+                        focusedBorderColor = ClickitPeach.copy(alpha = 0.7f),
+                        unfocusedBorderColor = ClickitSubtleLine,
                         focusedTextColor = ClickitIvory,
                         unfocusedTextColor = ClickitIvory,
                         focusedContainerColor = ClickitSlateDeep,
                         unfocusedContainerColor = ClickitSlateDeep
                     ),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(28.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("home_search_input")
@@ -210,9 +222,17 @@ fun CustomerHomeScreen(
                             selected = selectedCategory == null,
                             onClick = { onCategoryChange(null) },
                             label = { Text("All") },
+                            shape = RoundedCornerShape(50),
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = ClickitPeach,
-                                selectedLabelColor = ClickitMidnight
+                                selectedLabelColor = ClickitMidnight,
+                                containerColor = ClickitSlateDeep,
+                                labelColor = ClickitIvory
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selectedCategory == null,
+                                borderColor = ClickitSubtleLine
                             ),
                             modifier = Modifier.testTag("home_filter_all")
                         )
@@ -223,9 +243,17 @@ fun CustomerHomeScreen(
                             selected = selectedCategory == cat,
                             onClick = { onCategoryChange(if (selectedCategory == cat) null else cat) },
                             label = { Text(chipLabel) },
+                            shape = RoundedCornerShape(50),
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = ClickitPeach,
-                                selectedLabelColor = ClickitMidnight
+                                selectedLabelColor = ClickitMidnight,
+                                containerColor = ClickitSlateDeep,
+                                labelColor = ClickitIvory
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selectedCategory == cat,
+                                borderColor = ClickitSubtleLine
                             ),
                             modifier = Modifier.testTag("home_filter_${cat.key}")
                         )
@@ -237,8 +265,8 @@ fun CustomerHomeScreen(
         item {
             Surface(
                 color = ClickitSlateDeep,
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, ClickitSlate),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, ClickitSubtleLine),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("home_address_bar")
@@ -246,7 +274,7 @@ fun CustomerHomeScreen(
                     .clickable(onClick = onManageAddressesClick)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -254,23 +282,29 @@ fun CustomerHomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        NeonIconBadge(
-                            icon = Icons.Filled.LocationOn,
-                            tint = ClickitPeach,
-                            glowColor = ClickitPeach,
-                            size = 34.dp,
-                            iconSize = 18.dp,
-                            contentDescription = "Service address"
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(ClickitPeach.copy(alpha = 0.14f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.LocationOn,
+                                contentDescription = "Service address",
+                                tint = ClickitPeach,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                         Spacer(Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = defaultAddress?.label ?: "Add Address",
-                                style = MaterialTheme.typography.titleSmall,
+                                text = "Deliver to ${defaultAddress?.label ?: "Your Area"}",
+                                style = MaterialTheme.typography.labelLarge,
                                 color = ClickitIvory
                             )
                             Text(
-                                text = defaultAddress?.formattedSummary() ?: "Tap to add address",
+                                text = defaultAddress?.formattedSummary() ?: "Tap to set pickup & delivery address",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = ClickitMutedText,
                                 maxLines = 1,
@@ -278,7 +312,7 @@ fun CustomerHomeScreen(
                             )
                         }
                     }
-                    Text("Change", style = MaterialTheme.typography.labelMedium, color = ClickitPeach)
+                    Text("Change", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold), color = ClickitPeach)
                 }
             }
         }
@@ -287,7 +321,7 @@ fun CustomerHomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(116.dp)
+                    .height(132.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .clickable(onClick = onExploreClick)
             ) {
@@ -302,7 +336,7 @@ fun CustomerHomeScreen(
                         .fillMaxSize()
                         .background(
                             Brush.horizontalGradient(
-                                listOf(ClickitMidnight.copy(alpha = 0.88f), ClickitMidnight.copy(alpha = 0.25f))
+                                listOf(ClickitMidnight.copy(alpha = 0.92f), ClickitMidnight.copy(alpha = 0.35f))
                             )
                         )
                 )
@@ -310,21 +344,36 @@ fun CustomerHomeScreen(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .padding(18.dp)
-                        .fillMaxWidth(0.75f),
+                        .fillMaxWidth(0.84f),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Surface(color = ClickitBurgundy, shape = RoundedCornerShape(50)) {
-                        Text(
-                            text = "SMART BATCH • ₹2/CLOTH",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ClickitPeachSoft,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(50)) {
+                            Text(
+                                text = "FREE DELIVERY >5 KG",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = ClickitSuccess,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                        Surface(color = ClickitSlate.copy(alpha = 0.9f), shape = RoundedCornerShape(50)) {
+                            Text(
+                                text = "BATCH ₹2/CLOTH",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ClickitPeachSoft,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                     Text(
-                        text = "Local Dukaans nearby",
-                        style = MaterialTheme.typography.headlineSmall,
+                        text = "Trusted local care at your door",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = ClickitIvory
+                    )
+                    Text(
+                        text = "OTP sealed bags • Free delivery on 5+ kg loads",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ClickitMutedText
                     )
                 }
             }
@@ -352,9 +401,10 @@ fun CustomerHomeScreen(
                     val isSelected = selectedCategory == category
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) ClickitBurgundy.copy(alpha = 0.65f) else ClickitSlateDeep
+                            containerColor = if (isSelected) ClickitSlate else ClickitSlateDeep
                         ),
-                        border = BorderStroke(1.dp, if (isSelected) ClickitPeach else ClickitSlate),
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, if (isSelected) ClickitPeach else ClickitSubtleLine),
                         modifier = Modifier
                             .width(156.dp)
                             .testTag("category_card_${category.key}")
@@ -488,14 +538,14 @@ fun CustomerExploreScreen(
                 },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ClickitPeach,
-                    unfocusedBorderColor = ClickitSlate,
+                    focusedBorderColor = ClickitPeach.copy(alpha = 0.7f),
+                    unfocusedBorderColor = ClickitSubtleLine,
                     focusedTextColor = ClickitIvory,
                     unfocusedTextColor = ClickitIvory,
                     focusedContainerColor = ClickitSlateDeep,
                     unfocusedContainerColor = ClickitSlateDeep
                 ),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(28.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("explore_search_input")
@@ -594,14 +644,18 @@ fun CustomerExploreScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ShopSummaryCard(
     shop: Shop,
     onClick: () -> Unit
 ) {
+    val loadRatio = (shop.activeLoad.toFloat() / shop.dailyCapacity.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
+    val isBusyToday = loadRatio >= 0.8f
     Card(
         colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSlate),
+        border = BorderStroke(1.dp, ClickitSubtleLine),
+        shape = RoundedCornerShape(16.dp),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("shop_card_${shop.id}")
@@ -626,9 +680,17 @@ fun ShopSummaryCard(
                         Spacer(Modifier.width(4.dp))
                     }
                     Text(
-                        text = if (shop.openStatus) "Open Now" else "Paused",
+                        text = when {
+                            !shop.openStatus -> "Paused"
+                            isBusyToday -> "Busy Today"
+                            else -> "Ready • Fast Slot"
+                        },
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (shop.openStatus) ClickitSuccess else ClickitPeachSoft
+                        color = when {
+                            !shop.openStatus -> ClickitPeachSoft
+                            isBusyToday -> ClickitWarning
+                            else -> ClickitSuccess
+                        }
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -642,7 +704,33 @@ fun ShopSummaryCard(
                 }
             }
 
-            Text(shop.shopName, style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
+            Text(shop.shopName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = ClickitIvory)
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (shop.supportsClickitBatch || shop.supportsWorkerDelivery) {
+                    Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                        Text(
+                            text = "Free delivery >5 kg",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ClickitSuccess,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+                if (shop.verified) {
+                    Surface(color = ClickitSlate, shape = RoundedCornerShape(8.dp)) {
+                        Text(
+                            text = "QR Tagged • Area Rider",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ClickitInfo,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -671,7 +759,7 @@ fun ShopSummaryCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ShopBookingBottomSheet(
     shop: Shop,
@@ -690,7 +778,8 @@ fun ShopBookingBottomSheet(
         slotIndex: Int,
         batchOptIn: Boolean,
         address: SavedAddress?,
-        notes: String
+        notes: String,
+        urgentService: Boolean
     ) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -756,6 +845,9 @@ fun ShopBookingBottomSheet(
     }
     var batchOptIn by remember(shop.id, prefillBooking?.id) {
         mutableStateOf(prefillBooking?.batchOptIn ?: true)
+    }
+    var urgentService by remember(shop.id, prefillBooking?.id) {
+        mutableStateOf(prefillBooking?.itemsSummary?.contains("URGENT +25%", ignoreCase = true) == true)
     }
     var selectedAddressId by remember(shop.id) { mutableStateOf<String?>(null) }
     val selectedAddress = addresses.firstOrNull { it.id == selectedAddressId } ?: addresses.firstOrNull()
@@ -926,34 +1018,178 @@ fun ShopBookingBottomSheet(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = weightText,
-                        onValueChange = { weightText = it },
-                        label = { Text("Est. Weight (kg)") },
-                        singleLine = true,
-                        modifier = Modifier.weight(0.4f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ClickitPeach,
-                            unfocusedBorderColor = ClickitSlate,
-                            focusedTextColor = ClickitIvory,
-                            unfocusedTextColor = ClickitIvory
+                val parsedWeightKg = weightText.toDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0
+                val weightPresets = listOf("2.5", "4.0", "5.5", "7.5")
+                val carePresets = listOf("Delicate Wash", "No Bleach", "Light Starch", "Separate Whites", "Handle With Care")
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Load Weight (kg)", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                        Text(
+                            text = "Free delivery above 5 kg",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ClickitSuccess
                         )
-                    )
-                    OutlinedTextField(
-                        value = itemNotes,
-                        onValueChange = { itemNotes = it },
-                        label = { Text("Item Notes (optional)") },
-                        placeholder = { Text("Separate whites, delicate hem...") },
-                        singleLine = true,
-                        modifier = Modifier.weight(0.6f),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ClickitPeach,
-                            unfocusedBorderColor = ClickitSlate,
-                            focusedTextColor = ClickitIvory,
-                            unfocusedTextColor = ClickitIvory
+                    }
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        weightPresets.forEach { preset ->
+                            val isFreePreset = (preset.toDoubleOrNull() ?: 0.0) > FREE_DELIVERY_WEIGHT_THRESHOLD_KG
+                            val isSelected = weightText.trim() == preset
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { weightText = preset },
+                                label = {
+                                    Text(
+                                        text = if (isFreePreset) "$preset kg • FREE" else "$preset kg",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = if (isFreePreset) ClickitSuccess else ClickitPeach,
+                                    selectedLabelColor = ClickitMidnight,
+                                    containerColor = ClickitSlateDeep,
+                                    labelColor = if (isFreePreset) ClickitSuccess else ClickitIvory
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = isSelected,
+                                    borderColor = if (isFreePreset) ClickitSuccess.copy(alpha = 0.45f) else ClickitSubtleLine
+                                ),
+                                modifier = Modifier.testTag("weight_preset_${preset.replace(".", "_")}")
+                            )
+                        }
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        OutlinedTextField(
+                            value = weightText,
+                            onValueChange = { weightText = it },
+                            label = { Text("Weight (kg)") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(0.38f)
+                                .testTag("booking_weight_input"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = ClickitPeach,
+                                unfocusedBorderColor = ClickitSubtleLine,
+                                focusedTextColor = ClickitIvory,
+                                unfocusedTextColor = ClickitIvory
+                            )
                         )
-                    )
+                        OutlinedTextField(
+                            value = itemNotes,
+                            onValueChange = { itemNotes = it },
+                            label = { Text("Care Notes (optional)") },
+                            placeholder = { Text("Delicate wash, separate whites...") },
+                            singleLine = true,
+                            modifier = Modifier
+                                .weight(0.62f)
+                                .testTag("booking_notes_input"),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = ClickitPeach,
+                                unfocusedBorderColor = ClickitSubtleLine,
+                                focusedTextColor = ClickitIvory,
+                                unfocusedTextColor = ClickitIvory
+                            )
+                        )
+                    }
+
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        carePresets.forEach { tag ->
+                            val active = itemNotes.contains(tag, ignoreCase = true)
+                            FilterChip(
+                                selected = active,
+                                onClick = {
+                                    val parts = itemNotes.split(",")
+                                        .map { it.trim() }
+                                        .filter { it.isNotEmpty() }
+                                        .toMutableList()
+                                    if (active) {
+                                        parts.removeAll { it.equals(tag, ignoreCase = true) }
+                                    } else {
+                                        parts.add(tag)
+                                    }
+                                    itemNotes = parts.joinToString(", ")
+                                },
+                                label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = ClickitInfoContainer,
+                                    selectedLabelColor = ClickitInfo,
+                                    containerColor = ClickitSlateDeep,
+                                    labelColor = ClickitMutedText
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = active,
+                                    borderColor = ClickitSubtleLine
+                                )
+                            )
+                        }
+                    }
+
+                    if (selectedFulfilment != FulfilmentMethod.SHOP_DROP) {
+                        val unlockedFreeDelivery = parsedWeightKg > FREE_DELIVERY_WEIGHT_THRESHOLD_KG
+                        val remainingKg = (FREE_DELIVERY_WEIGHT_THRESHOLD_KG - parsedWeightKg).coerceAtLeast(0.0)
+                        val progress = (parsedWeightKg / FREE_DELIVERY_WEIGHT_THRESHOLD_KG).toFloat().coerceIn(0f, 1f)
+                        Surface(
+                            color = if (unlockedFreeDelivery) ClickitSuccessContainer else ClickitSlateDeep,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                if (unlockedFreeDelivery) ClickitSuccess.copy(alpha = 0.45f) else ClickitSubtleLine
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("free_delivery_weight_banner")
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (unlockedFreeDelivery) Icons.Filled.CheckCircle else Icons.Filled.LocalShipping,
+                                        contentDescription = null,
+                                        tint = if (unlockedFreeDelivery) ClickitSuccess else ClickitPeach,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = when {
+                                            unlockedFreeDelivery -> "FREE pickup & delivery unlocked (>5 kg)!"
+                                            parsedWeightKg == FREE_DELIVERY_WEIGHT_THRESHOLD_KG ->
+                                                "Add 0.1+ kg (above 5 kg) for FREE delivery"
+                                            else ->
+                                                "Add ${"%.1f".format(remainingKg)} kg more (above 5 kg) for FREE delivery"
+                                        },
+                                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                        color = if (unlockedFreeDelivery) ClickitSuccess else ClickitIvory
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    color = if (unlockedFreeDelivery) ClickitSuccess else ClickitPeach,
+                                    trackColor = ClickitSlate,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(50))
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Text("2. Pickup & Delivery", style = MaterialTheme.typography.titleMedium, color = ClickitPeach)
@@ -1109,26 +1345,86 @@ fun ShopBookingBottomSheet(
                     }
                 }
 
-                val slot = DefaultPickupSlots[selectedSlotIndex]
-                val subtotal = svc.priceMinor * quantity.toLong()
-                val delivery = when (selectedFulfilment) {
-                    FulfilmentMethod.SHOP_DROP -> 0L
-                    FulfilmentMethod.WORKER_DELIVERY -> 2500L
-                    FulfilmentMethod.CLICKIT_PICKUP_RETURN -> {
-                        val perCloth = quantity.toLong() * 200L
-                        if (batchOptIn && slot.batchEligible) perCloth.coerceAtLeast(1000L) else 2500L
+                Surface(
+                    color = if (urgentService) ClickitWarningContainer else ClickitSlateDeep,
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        if (urgentService) ClickitWarning.copy(alpha = 0.6f) else ClickitSubtleLine
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("urgent_service_card")
+                        .clickable { urgentService = !urgentService }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Bolt,
+                                contentDescription = "Emergency service",
+                                tint = if (urgentService) ClickitWarning else ClickitPeach,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Column {
+                                Text(
+                                    text = "Need it fast? Emergency Service (+25%)",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = ClickitIvory
+                                )
+                                Text(
+                                    text = "Urgent pickup & priority turnaround • Priced upfront",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ClickitMutedText
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = urgentService,
+                            onCheckedChange = { urgentService = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = ClickitMidnight,
+                                checkedTrackColor = ClickitWarning
+                            ),
+                            modifier = Modifier.testTag("urgent_service_switch")
+                        )
                     }
                 }
-                val platformFee = 100L
-                val total = subtotal + delivery + platformFee
+
+                val slot = DefaultPickupSlots[selectedSlotIndex]
+                val effectiveWeightKg = weightText.toDoubleOrNull()?.coerceAtLeast(0.1) ?: 2.5
+                val feeQuote = calculateBookingFees(
+                    unitPriceMinor = svc.priceMinor,
+                    quantity = quantity,
+                    weightKg = effectiveWeightKg,
+                    fulfilment = selectedFulfilment,
+                    batchOptIn = batchOptIn,
+                    batchEligible = slot.batchEligible,
+                    urgentService = urgentService
+                )
 
                 PriceBreakdownCard(
-                    serviceSubtotalMinor = subtotal,
-                    deliveryFeeMinor = delivery,
-                    platformFeeMinor = platformFee,
-                    totalMinor = total,
-                    quoteStatus = "awaiting_worker_confirmation"
+                    serviceSubtotalMinor = feeQuote.serviceSubtotalMinor,
+                    deliveryFeeMinor = feeQuote.deliveryFeeMinor,
+                    platformFeeMinor = feeQuote.platformFeeMinor,
+                    totalMinor = feeQuote.totalMinor,
+                    quoteStatus = "awaiting_worker_confirmation",
+                    isFreeDeliveryByWeight = feeQuote.isFreeDeliveryByWeight,
+                    savedDeliveryMinor = feeQuote.originalDeliveryFeeMinor,
+                    emergencySurchargeMinor = feeQuote.emergencySurchargeMinor,
+                    isUrgentService = feeQuote.isUrgentService
                 )
+
+                TrustProtectionStrip(compact = true)
 
                 val hasAddressForFulfilment = selectedFulfilment == FulfilmentMethod.SHOP_DROP ||
                     selectedAddress != null ||
@@ -1136,7 +1432,6 @@ fun ShopBookingBottomSheet(
 
                 Button(
                     onClick = {
-                        val weight = weightText.toDoubleOrNull() ?: 2.0
                         val resolvedAddress = selectedAddress ?: if (selectedFulfilment != FulfilmentMethod.SHOP_DROP) {
                             SavedAddress(
                                 label = "Pickup",
@@ -1149,12 +1444,13 @@ fun ShopBookingBottomSheet(
                         onSubmitBooking(
                             svc,
                             quantity,
-                            weight,
+                            effectiveWeightKg,
                             selectedFulfilment,
                             selectedSlotIndex,
                             batchOptIn,
                             resolvedAddress,
-                            itemNotes
+                            itemNotes,
+                            urgentService
                         )
                     },
                     enabled = !isBusy && shop.openStatus && hasAddressForFulfilment,
@@ -1172,7 +1468,9 @@ fun ShopBookingBottomSheet(
                         text = when {
                             !shop.openStatus -> "Shop Currently Paused"
                             !hasAddressForFulfilment -> "Enter Pickup Address"
-                            else -> "Confirm Booking • ${formatInr(total)}"
+                            feeQuote.isFreeDeliveryByWeight ->
+                                "Confirm • ${formatInr(feeQuote.totalMinor)} (Free Delivery)"
+                            else -> "Confirm Booking • ${formatInr(feeQuote.totalMinor)}"
                         },
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
