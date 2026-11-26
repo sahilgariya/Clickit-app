@@ -515,14 +515,27 @@ fun CustomerBookingDetailSheet(
                                 unfocusedTextColor = ClickitTextPrimary
                             )
                         )
+                        val needsPaymentFirst = status != BookingStatus.COMPLETED && booking.paymentStatus != "paid"
                         Button(
-                            onClick = { onConfirmDeliveryAndRate(ratingStars, reviewText) },
+                            onClick = {
+                                if (needsPaymentFirst) {
+                                    onPay()
+                                } else {
+                                    onConfirmDeliveryAndRate(ratingStars, reviewText)
+                                }
+                            },
                             enabled = !isBusy,
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White),
                             modifier = Modifier.fillMaxWidth().height(48.dp).testTag("confirm_receipt_button")
                         ) {
-                            Text(if (status == BookingStatus.COMPLETED) "Submit" else "Complete")
+                            Text(
+                                when {
+                                    needsPaymentFirst -> "Pay to Complete"
+                                    status == BookingStatus.COMPLETED -> "Submit"
+                                    else -> "Complete"
+                                }
+                            )
                         }
                     }
                 }

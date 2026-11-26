@@ -492,3 +492,155 @@ test("End-to-end Booking & DeliveryTask security boundaries, partner claim, and 
     })
   );
 });
+
+test("Hardened security boundaries: block rating tampering, price spoofing, unpaid completion, premature partner claim, and mismatched delivery_tasks", async () => {
+  const aliceDb = testEnv.authenticatedContext(ALICE_UID).firestore();
+  const bobDb = testEnv.authenticatedContext(BOB_UID).firestore();
+  const charlieDb = testEnv.authenticatedContext(CHARLIE_UID).firestore();
+
+  await testEnv.withSecurityRulesDisabled(async (ctx) => {
+    await ctx.firestore().collection("shops").doc("shop_sec").set(buildShopPayload(BOB_UID));
+  });
+
+  // 1. Non-owner Alice AND owner Bob cannot tamper with published shop ratingAvg/ratingCount/activeLoad
+  await assertFails(
+    aliceDb.collection("shops").doc("shop_sec").update({
+      ratingAvg: 1.0,
+      ratingCount: 999,
+      updatedAt: pastDate(),
+    })
+  );
+  await assertFails(
+    bobDb.collection("shops").doc("shop_sec").update({
+      ratingAvg: 5.0,
+      ratingCount: 999,
+      updatedAt: pastDate(),
+    })
+  );
+  // Owner can still legitimately update operational shop settings
+  await assertSucceeds(
+    bobDb.collection("shops").doc("shop_sec").update({
+      openStatus: false,
+      updatedAt: pastDate(),
+    })
+  );
+
+  // 2. Booking create blocks workerOwnerId spoofing, mismatched totalMinor, and non-numeric OTP
+  await assertFails(
+    aliceDb.collection("bookings").doc("bk_spoof_worker").set(
+      buildBookingPayload(ALICE_UID, ALICE_UID, "shop_sec")
+    )
+  );
+  await assertFails(
+    aliceDb.collection("bookings").doc("bk_bad_total").set(
+      buildBookingPayload(ALICE_UID, BOB_UID, "shop_sec", { totalMinor: 100 })
+    )
+  );
+  await assertFails(
+    aliceDb.collection("bookings").doc("bk_bad_otp").set(
+      buildBookingPayload(ALICE_UID, BOB_UID, "shop_sec", { handoverOtp: "abcd" })
+    )
+  );
+
+  // Valid booking created
+  await assertSucceeds(
+    aliceDb.collection("bookings").doc("bk_sec").set(
+      buildBookingPayload(ALICE_UID, BOB_UID, "shop_sec")
+    )
+  );
+
+  // 3. Premature partner claim while booking is still 'requested' must fail
+  await assertFails(
+    charlieDb.collection("bookings").doc("bk_sec").update({
+      assignedPartnerId: CHARLIE_UID,
+      milestone: "Premature claim",
+      updatedAt: pastDate(),
+    })
+  );
+
+  // 4. Customer cannot tamper with booking prices
+  await assertFails(
+    aliceDb.collection("bookings").doc("bk_sec").update({
+      totalMinor: 0,
+      serviceSubtotalMinor: 0,
+      updatedAt: pastDate(),
+    })
+  );
+
+  // 5. Customer cannot mark unpaid booking as completed directly
+  await assertFails(
+    aliceDb.collection("bookings").doc("bk_sec").update({
+      status: "completed",
+      updatedAt: pastDate(),
+    })
+  );
+  await assertFails(
+    aliceDb.collection("bookings").doc("bk_sec").update({
+      status: "completed",
+      paymentStatus: "paid",
+      updatedAt: pastDate(),
+    })
+  );
+
+  // 6. Cross-booking delivery_task customerId/workerOwnerId spoofing must fail
+  await assertFails(
+    aliceDb.collection("delivery_tasks").doc("task_spoof").set({
+      bookingId: "bk_sec",
+      customerId: ALICE_UID,
+      workerOwnerId: CHARLIE_UID, // mismatched from bk_sec's workerOwnerId (BOB_UID)
+      batchId: "BATCH-09AM",
+      taskType: "pickup",
+      status: "offered",
+      pickupZone: "Indiranagar",
+      dropZone: "Royal Steam & Press",
+      shopName: "Royal Steam & Press",
+      timeWindowLabel: "09:00 AM - 10:00 AM",
+      parcelCode: "CLK-4821",
+      itemCount: 5,
+      estimatedWeightKg: 2.5,
+      payoutMinor: 2000,
+      batchStopIndex: 1,
+      batchTotalStops: 3,
+      createdAt: pastDate(),
+      updatedAt: pastDate(),
+    })
+  );
+
+  // 7. Partner can transition pickup_scheduled -> picked_up -> received_by_worker cleanly
+  await assertSucceeds(
+    bobDb.collection("bookings").doc("bk_sec").update({
+      status: "pickup_scheduled",
+      quoteStatus: "confirmed",
+      updatedAt: pastDate(),
+    })
+  );
+  await assertSucceeds(
+    charlieDb.collection("bookings").doc("bk_sec").update({
+      assignedPartnerId: CHARLIE_UID,
+      milestone: "Partner assigned",
+      updatedAt: pastDate(),
+    })
+  );
+  await assertSucceeds(
+    charlieDb.collection("bookings").doc("bk_sec").update({
+      status: "picked_up",
+      milestone: "Picked up",
+      updatedAt: pastDate(),
+    })
+  );
+  await assertSucceeds(
+    charlieDb.collection("bookings").doc("bk_sec").update({
+      status: "received_by_worker",
+      milestone: "Handed over",
+      updatedAt: pastDate(),
+    })
+  );
+  // Partner cannot cancel or complete a booking
+  await assertFails(
+    charlieDb.collection("bookings").doc("bk_sec").update({
+      status: "completed",
+      updatedAt: pastDate(),
+    })
+  );
+});
+

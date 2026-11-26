@@ -17,6 +17,17 @@ enum class OperationType(val value: String) {
     WRITE("write"),
 }
 
+fun maskEmail(email: String?): String? {
+    val clean = email?.trim().orEmpty()
+    if (clean.isEmpty()) return email
+    val atIdx = clean.indexOf('@')
+    if (atIdx <= 0) return "***"
+    val local = clean.substring(0, atIdx)
+    val domain = clean.substring(atIdx)
+    val visiblePrefix = local.take(2)
+    return "$visiblePrefix***$domain"
+}
+
 fun handleFirestoreError(
     exception: Throwable,
     operationType: OperationType,
@@ -36,13 +47,13 @@ fun handleFirestoreError(
     val providerInfoList = currentUser?.providerData?.map { provider ->
         JSONObject().apply {
             put("providerId", provider.providerId)
-            put("email", provider.email)
+            put("email", maskEmail(provider.email))
         }
     } ?: emptyList()
 
     val authInfoJson = JSONObject().apply {
         put("userId", currentUser?.uid)
-        put("email", currentUser?.email)
+        put("email", maskEmail(currentUser?.email))
         put("emailVerified", currentUser?.isEmailVerified)
         put("tenantId", currentUser?.tenantId)
         put("providerInfo", JSONArray(providerInfoList))

@@ -182,8 +182,7 @@ fun ClickitAppRoot() {
         if (FirebaseApp.getApps(appContext).isEmpty()) {
             FirebaseApp.initializeApp(appContext)
         }
-        val databaseId = appContext.getString(R.string.firestore_database_id)
-        val db = FirebaseFirestore.getInstance(databaseId)
+        val db = ClickitRepository.getConfiguredFirestore(appContext)
         ClickitRepository(db, appContext = appContext)
     }
     val authHandler = remember(repository) { RoleBasedAuthHandler(repository) }
@@ -276,7 +275,8 @@ fun ClickitAppRoot() {
                             ClickitViewModel(
                                 repository = repository,
                                 currentUserId = dest.uid,
-                                initialDisplayName = dest.initialDisplayName
+                                initialDisplayName = dest.initialDisplayName,
+                                prefs = prefs
                             )
                         }
                     }
@@ -315,7 +315,8 @@ fun ClickitAppRoot() {
                             ClickitViewModel(
                                 repository = repository,
                                 currentUserId = dest.profile.userId,
-                                initialDisplayName = dest.profile.displayName
+                                initialDisplayName = dest.profile.displayName,
+                                prefs = prefs
                             )
                         }
                     }
@@ -578,7 +579,7 @@ fun ClickitMainShell(
                 prefillBookingForReorder = null
                 viewModel.selectShop(null)
             },
-            onSubmitBooking = { svc, qty, weight, fulfilment, slotIdx, batchOptIn, addr, notes, urgent ->
+            onSubmitBooking = { svc, qty, weight, fulfilment, slotIdx, batchOptIn, addr, notes, urgent, saveAddr ->
                 viewModel.createBooking(
                     customerName = profile.displayName,
                     shop = shop,
@@ -591,6 +592,7 @@ fun ClickitMainShell(
                     address = addr,
                     itemNotes = notes,
                     urgentService = urgent,
+                    saveNewAddress = saveAddr,
                     onCreated = {
                         activeShopForBooking = null
                         prefillBookingForReorder = null
@@ -908,8 +910,8 @@ fun ClickitMainShell(
                                 },
                                 onSaveAddress = viewModel::saveAddress,
                                 onDeleteAddress = viewModel::deleteAddress,
-                                onCreateTicket = { cat, sub, desc ->
-                                    viewModel.createSupportTicket("", cat, sub, desc)
+                                onCreateTicket = { cat, sub, desc, onDone ->
+                                    viewModel.createSupportTicket("", cat, sub, desc, onDone)
                                 },
                                 onRetry = viewModel::retryStreams,
                                 onSignOut = onSignOut
@@ -967,8 +969,8 @@ fun ClickitMainShell(
                             },
                             onSaveAddress = viewModel::saveAddress,
                             onDeleteAddress = viewModel::deleteAddress,
-                            onCreateTicket = { cat, sub, desc ->
-                                viewModel.createSupportTicket("", cat, sub, desc)
+                            onCreateTicket = { cat, sub, desc, onDone ->
+                                viewModel.createSupportTicket("", cat, sub, desc, onDone)
                             },
                             onRetry = viewModel::retryStreams,
                             onSignOut = onSignOut
@@ -1018,8 +1020,8 @@ fun ClickitMainShell(
                             },
                             onSaveAddress = viewModel::saveAddress,
                             onDeleteAddress = viewModel::deleteAddress,
-                            onCreateTicket = { cat, sub, desc ->
-                                viewModel.createSupportTicket("", cat, sub, desc)
+                            onCreateTicket = { cat, sub, desc, onDone ->
+                                viewModel.createSupportTicket("", cat, sub, desc, onDone)
                             },
                             onRetry = viewModel::retryStreams,
                             onSignOut = onSignOut

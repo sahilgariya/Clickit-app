@@ -327,6 +327,15 @@ class ExampleUnitTest {
         assertEquals(0L, urgentHeavyBundle.deliveryFeeMinor)
         assertEquals(25000L + 100L, urgentHeavyBundle.totalMinor)
     }
+
+    @Test
+    fun `maskEmail redacts local part while preserving domain and handles edge inputs`() {
+        assertEquals("sa***@gmail.com", com.example.data.maskEmail("sahilgariya@gmail.com"))
+        assertEquals("a***@example.org", com.example.data.maskEmail("a@example.org"))
+        assertEquals("***", com.example.data.maskEmail("invalid-email"))
+        assertEquals("", com.example.data.maskEmail(""))
+        assertEquals(null, com.example.data.maskEmail(null))
+    }
 }
 
 

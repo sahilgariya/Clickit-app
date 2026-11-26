@@ -285,10 +285,10 @@ fun PartnerRouteScreen(
     if (otpDialogTask != null) {
         val (task, booking) = otpDialogTask!!
         val expectedOtp = if (task.taskType == "pickup") booking?.handoverOtp ?: "" else booking?.deliveryOtp ?: ""
-        var enteredOtp by remember { mutableStateOf(expectedOtp) }
-        var otpError by remember { mutableStateOf<String?>(null) }
+        var enteredOtp by remember(task.id) { mutableStateOf("") }
+        var otpError by remember(task.id) { mutableStateOf<String?>(null) }
         AlertDialog(
-            onDismissRequest = { otpDialogTask = null },
+            onDismissRequest = { if (!isBusy) otpDialogTask = null },
             containerColor = ClickitLightSurface,
             title = {
                 Text(
@@ -299,19 +299,20 @@ fun PartnerRouteScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "${task.itemCount} items • Parcel ${task.parcelCode} • OTP: $expectedOtp",
+                        text = "${task.itemCount} items • Parcel ${task.parcelCode}. Ask customer for OTP.",
                         style = MaterialTheme.typography.bodySmall,
                         color = ClickitTextSecondary
                     )
                     OutlinedTextField(
                         value = enteredOtp,
                         onValueChange = {
-                            enteredOtp = it
+                            enteredOtp = it.filter { ch -> ch.isDigit() }.take(8)
                             otpError = null
                         },
                         label = { Text("4-digit OTP *") },
                         singleLine = true,
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.testTag("partner_otp_input")
                     )
                     if (otpError != null) {
                         Text(otpError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
@@ -321,7 +322,10 @@ fun PartnerRouteScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (expectedOtp.isNotBlank() && enteredOtp.trim() != expectedOtp) {
+                        val cleanOtp = enteredOtp.trim()
+                        if (cleanOtp.length !in 4..8 || !cleanOtp.all { it.isDigit() }) {
+                            otpError = "Enter 4-digit OTP from customer."
+                        } else if (expectedOtp.isNotBlank() && cleanOtp != expectedOtp) {
                             otpError = "Invalid OTP. Verify with customer."
                         } else {
                             if (task.taskType == "pickup") {
@@ -353,29 +357,46 @@ fun PartnerRouteScreen(
     }
 
     if (exceptionTarget != null) {
-        var reason by remember { mutableStateOf("Customer unavailable") }
+        var reason by remember(exceptionTarget!!.id) { mutableStateOf("Customer unavailable") }
+        var reasonError by remember(exceptionTarget!!.id) { mutableStateOf<String?>(null) }
         AlertDialog(
-            onDismissRequest = { exceptionTarget = null },
+            onDismissRequest = { if (!isBusy) exceptionTarget = null },
             containerColor = ClickitLightSurface,
             title = { Text("Report Issue", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Other stops remain unaffected.", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
-                    OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(
+                        value = reason,
+                        onValueChange = {
+                            reason = it
+                            reasonError = null
+                        },
+                        label = { Text("Reason *") },
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    if (reasonError != null) {
+                        Text(reasonError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onReportException(exceptionTarget!!, reason)
-                        exceptionTarget = null
+                        if (reason.trim().length !in 3..160) {
+                            reasonError = "Enter a reason (3–160 chars)."
+                        } else {
+                            onReportException(exceptionTarget!!, reason.trim())
+                            exceptionTarget = null
+                        }
                     },
+                    enabled = !isBusy,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ClickitCrimson, contentColor = Color.White)
                 ) { Text("Submit") }
             },
             dismissButton = {
-                TextButton(onClick = { exceptionTarget = null }) { Text("Cancel", color = ClickitTextSecondary) }
+                TextButton(onClick = { exceptionTarget = null }, enabled = !isBusy) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }

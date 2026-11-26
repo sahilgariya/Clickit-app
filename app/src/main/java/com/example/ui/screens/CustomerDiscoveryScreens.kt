@@ -804,7 +804,8 @@ fun ShopBookingBottomSheet(
         batchOptIn: Boolean,
         address: SavedAddress?,
         notes: String,
-        urgentService: Boolean
+        urgentService: Boolean,
+        saveNewAddress: Boolean
     ) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -879,6 +880,8 @@ fun ShopBookingBottomSheet(
     var quickHouseNo by remember(shop.id) { mutableStateOf("") }
     var quickStreet by remember(shop.id) { mutableStateOf("") }
     var quickLocality by remember(shop.id) { mutableStateOf(shop.locality) }
+    var quickPostal by remember(shop.id) { mutableStateOf("") }
+    var saveQuickAddress by remember(shop.id) { mutableStateOf(true) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1383,6 +1386,43 @@ fun ShopBookingBottomSheet(
                             )
                         )
                     }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        OutlinedTextField(
+                            value = quickPostal,
+                            onValueChange = { quickPostal = it.take(12) },
+                            label = { Text(if (saveQuickAddress) "PIN *" else "PIN") },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(0.42f),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = ClickitBrandTeal,
+                                unfocusedBorderColor = ClickitBorder,
+                                focusedTextColor = ClickitTextPrimary,
+                                unfocusedTextColor = ClickitTextPrimary
+                            )
+                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .weight(0.58f)
+                                .clickable { saveQuickAddress = !saveQuickAddress }
+                        ) {
+                            Checkbox(
+                                checked = saveQuickAddress,
+                                onCheckedChange = { saveQuickAddress = it },
+                                colors = CheckboxDefaults.colors(checkedColor = ClickitBrandTeal, checkmarkColor = Color.White)
+                            )
+                            Text(
+                                text = "Save address",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ClickitTextPrimary
+                            )
+                        }
+                    }
                 }
 
                 Surface(
@@ -1466,19 +1506,23 @@ fun ShopBookingBottomSheet(
 
                 TrustProtectionStrip(compact = true)
 
+                val hasQuickAddressFields = quickHouseNo.isNotBlank() && quickStreet.isNotBlank() && quickLocality.isNotBlank()
+                val hasValidQuickSavePin = !saveQuickAddress || quickPostal.trim().length in 3..12
                 val hasAddressForFulfilment = selectedFulfilment == FulfilmentMethod.SHOP_DROP ||
                     selectedAddress != null ||
-                    (quickHouseNo.isNotBlank() && quickStreet.isNotBlank() && quickLocality.isNotBlank())
+                    (hasQuickAddressFields && hasValidQuickSavePin)
 
                 Button(
                     onClick = {
+                        val areaText = quickLocality.trim()
                         val resolvedAddress = selectedAddress ?: if (selectedFulfilment != FulfilmentMethod.SHOP_DROP) {
                             SavedAddress(
-                                label = "Pickup",
+                                label = "Home",
                                 houseNo = quickHouseNo.trim(),
                                 street = quickStreet.trim(),
-                                locality = quickLocality.trim(),
-                                city = ""
+                                locality = areaText.substringBefore(",").trim().ifBlank { areaText },
+                                city = areaText.substringAfter(",", "").trim().ifBlank { areaText },
+                                postalCode = quickPostal.trim()
                             )
                         } else null
                         onSubmitBooking(
@@ -1490,7 +1534,8 @@ fun ShopBookingBottomSheet(
                             batchOptIn,
                             resolvedAddress,
                             itemNotes,
-                            urgentService
+                            urgentService,
+                            selectedAddress == null && saveQuickAddress && quickPostal.trim().length in 3..12
                         )
                     },
                     enabled = !isBusy && shop.openStatus && hasAddressForFulfilment,

@@ -1,6 +1,7 @@
 package com.example.ui
 
 import android.content.ContentResolver
+import android.content.SharedPreferences
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -46,7 +47,8 @@ sealed interface UiState<out T> {
 class ClickitViewModel(
     private val repository: ClickitRepository,
     val currentUserId: String,
-    val initialDisplayName: String
+    val initialDisplayName: String,
+    private val prefs: SharedPreferences? = null
 ) : ViewModel() {
 
     private companion object {
@@ -78,16 +80,24 @@ class ClickitViewModel(
 
     private val _selectedBookingContext = MutableStateFlow<Pair<String, Boolean>?>(null)
 
-    private val _partnerOnline = MutableStateFlow(true)
+    private val _partnerOnline = MutableStateFlow(
+        prefs?.getBoolean("partner_online_$currentUserId", true) ?: true
+    )
     val partnerOnline: StateFlow<Boolean> = _partnerOnline.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _selectedCategoryFilter = MutableStateFlow<ServiceCategory?>(null)
+    private val _selectedCategoryFilter = MutableStateFlow(
+        prefs?.getString("category_filter_$currentUserId", null)?.let { key ->
+            ServiceCategory.entries.firstOrNull { it.key == key }
+        }
+    )
     val selectedCategoryFilter: StateFlow<ServiceCategory?> = _selectedCategoryFilter.asStateFlow()
 
-    private val _batchOnlyFilter = MutableStateFlow(false)
+    private val _batchOnlyFilter = MutableStateFlow(
+        prefs?.getBoolean("batch_only_$currentUserId", false) ?: false
+    )
     val batchOnlyFilter: StateFlow<Boolean> = _batchOnlyFilter.asStateFlow()
 
     private val _actionMessage = MutableStateFlow<String?>(null)
@@ -191,14 +201,21 @@ class ClickitViewModel(
 
     fun setCategoryFilter(category: ServiceCategory?) {
         _selectedCategoryFilter.value = category
+        prefs?.edit()?.apply {
+            if (category == null) remove("category_filter_$currentUserId")
+            else putString("category_filter_$currentUserId", category.key)
+            apply()
+        }
     }
 
     fun setBatchOnlyFilter(enabled: Boolean) {
         _batchOnlyFilter.value = enabled
+        prefs?.edit()?.putBoolean("batch_only_$currentUserId", enabled)?.apply()
     }
 
     fun setPartnerOnline(online: Boolean) {
         _partnerOnline.value = online
+        prefs?.edit()?.putBoolean("partner_online_$currentUserId", online)?.apply()
     }
 
     fun clearMessage() {
@@ -371,6 +388,7 @@ class ClickitViewModel(
         address: SavedAddress?,
         itemNotes: String,
         urgentService: Boolean = false,
+        saveNewAddress: Boolean = false,
         onCreated: (String) -> Unit
     ) {
         viewModelScope.launch {
@@ -388,6 +406,18 @@ class ClickitViewModel(
                 itemNotes = itemNotes,
                 urgentService = urgentService
             )
+            if (res.isSuccess && saveNewAddress && address != null && address.id.isBlank() &&
+                fulfilment != FulfilmentMethod.SHOP_DROP &&
+                address.postalCode.trim().length in 3..12
+            ) {
+                repository.saveAddress(
+                    address.copy(
+                        label = address.label.trim().ifBlank { "Home" },
+                        city = address.city.trim().ifBlank { address.locality.trim() },
+                        defaultAddress = true
+                    )
+                )
+            }
             _isActionBusy.value = false
             res.onSuccess { bookingId ->
                 _actionMessage.value = "Booking submitted! Awaiting worker confirmation."
@@ -403,9 +433,15 @@ class ClickitViewModel(
         block = { repository.workerAcceptBooking(booking) }
     )
 
-    fun workerSendQuoteRevision(booking: Booking, newSubtotalMinor: Long, reason: String) = runAction(
+    fun workerSendQuoteRevision(
+        booking: Booking,
+        newSubtotalMinor: Long,
+        reason: String,
+        onDone: () -> Unit = {}
+    ) = runAction(
         successMessage = "Revised quote sent to customer",
-        block = { repository.workerSendQuoteRevision(booking, newSubtotalMinor, reason) }
+        block = { repository.workerSendQuoteRevision(booking, newSubtotalMinor, reason) },
+        onSuccess = onDone
     )
 
     fun workerRejectBooking(booking: Booking, reason: String) = runAction(

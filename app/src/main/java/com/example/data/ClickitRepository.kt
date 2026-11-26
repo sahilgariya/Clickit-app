@@ -10,6 +10,8 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FirebaseFirestoreException
+import com.google.firebase.firestore.FirebaseFirestoreSettings
+import com.google.firebase.firestore.PersistentCacheSettings
 import com.google.firebase.firestore.snapshots
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -20,18 +22,36 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.security.SecureRandom
 import java.util.Locale
-import kotlin.random.Random
 
 class ClickitRepository(
     private val db: FirebaseFirestore,
     private val auth: FirebaseAuth = Firebase.auth,
     private val appContext: Context? = null
 ) {
+    private val secureRandom = SecureRandom()
+
+    companion object {
+        fun getConfiguredFirestore(context: Context): FirebaseFirestore {
+            val databaseId = context.applicationContext.getString(R.string.firestore_database_id)
+            val instance = FirebaseFirestore.getInstance(databaseId)
+            runCatching {
+                val settings = FirebaseFirestoreSettings.Builder()
+                    .setLocalCacheSettings(
+                        PersistentCacheSettings.newBuilder()
+                            .setSizeBytes(100L * 1024L * 1024L)
+                            .build()
+                    )
+                    .build()
+                instance.firestoreSettings = settings
+            }
+            return instance
+        }
+    }
+
     constructor(context: Context) : this(
-        db = FirebaseFirestore.getInstance(
-            context.applicationContext.getString(R.string.firestore_database_id)
-        ),
+        db = getConfiguredFirestore(context),
         appContext = context.applicationContext
     )
 
@@ -572,7 +592,7 @@ class ClickitRepository(
             "updatedAt" to FieldValue.serverTimestamp()
         )
         val phoneClean = phoneMasked.trim().take(24)
-        if (phoneClean.isNotEmpty()) updates["phoneMasked"] = phoneClean
+        updates["phoneMasked"] = phoneClean
         if (photoUrl != null) updates["photoUrl"] = photoUrl
         db.collection("users").document(uid).update(updates).await()
         Result.success(Unit)
@@ -1035,9 +1055,9 @@ class ClickitRepository(
         val platformFee = feeQuote.platformFeeMinor
         val total = feeQuote.totalMinor
 
-        val parcelCode = "CLK-${Random.nextInt(1000, 9999)}"
-        val handoverOtp = Random.nextInt(1000, 9999).toString()
-        val deliveryOtp = Random.nextInt(1000, 9999).toString()
+        val parcelCode = "CLK-${1000 + secureRandom.nextInt(9000)}"
+        val handoverOtp = (1000 + secureRandom.nextInt(9000)).toString()
+        val deliveryOtp = (1000 + secureRandom.nextInt(9000)).toString()
 
         val bookingRef = db.collection("bookings").document()
         val bookingId = bookingRef.id
@@ -1432,10 +1452,10 @@ class ClickitRepository(
     suspend fun customerConfirmDeliveryAndRate(booking: Booking, stars: Int, reviewText: String): Result<Unit> = try {
         val uid = requireUserId()
         if (booking.status != BookingStatus.COMPLETED.key) {
+            require(booking.paymentStatus == "paid") { "Please complete RuPay payment before marking the order complete." }
             db.collection("bookings").document(booking.id).update(
                 mapOf(
                     "status" to BookingStatus.COMPLETED.key,
-                    "paymentStatus" to "paid",
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
             ).await()

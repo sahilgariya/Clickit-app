@@ -272,7 +272,7 @@ fun WorkerJobsScreen(
     workerBookingsState: UiState<List<Booking>>,
     isBusy: Boolean,
     onAccept: (Booking) -> Unit,
-    onSendQuote: (Booking, Long, String) -> Unit,
+    onSendQuote: (Booking, Long, String, () -> Unit) -> Unit,
     onReject: (Booking, String) -> Unit,
     onReceiveItems: (Booking) -> Unit,
     onUpdateMilestone: (Booking, String) -> Unit,
@@ -287,44 +287,51 @@ fun WorkerJobsScreen(
 
     if (quoteTarget != null) {
         val bk = quoteTarget!!
-        var amountRupees by remember { mutableStateOf((bk.serviceSubtotalMinor / 100L).toString()) }
-        var reason by remember { mutableStateOf("Actual item count / fabric delicacy adjustment") }
+        var amountRupees by remember(bk.id) { mutableStateOf((bk.serviceSubtotalMinor / 100L).toString()) }
+        var reason by remember(bk.id) { mutableStateOf("Actual item count / fabric delicacy adjustment") }
+        var quoteError by remember(bk.id) { mutableStateOf<String?>(null) }
         AlertDialog(
-            onDismissRequest = { quoteTarget = null },
+            onDismissRequest = { if (!isBusy) quoteTarget = null },
             containerColor = ClickitLightSurface,
             title = { Text("Update Quote (${bk.parcelCode})", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = amountRupees,
-                        onValueChange = { amountRupees = it },
+                        onValueChange = { amountRupees = it; quoteError = null },
                         label = { Text("Amount (₹) *") },
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp)
                     )
                     OutlinedTextField(
                         value = reason,
-                        onValueChange = { reason = it },
+                        onValueChange = { reason = it; quoteError = null },
                         label = { Text("Reason *") },
                         shape = RoundedCornerShape(10.dp)
                     )
+                    if (quoteError != null) {
+                        Text(quoteError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val minor = ((amountRupees.toDoubleOrNull() ?: 0.0) * 100.0).toLong()
-                        if (minor >= 100L && reason.trim().length >= 3) {
-                            onSendQuote(bk, minor, reason)
-                            quoteTarget = null
+                        val parsedRupees = amountRupees.trim().toDoubleOrNull()
+                        val minor = parsedRupees?.let { kotlin.math.round(it * 100.0).toLong() } ?: 0L
+                        when {
+                            parsedRupees == null || minor < 100L -> quoteError = "Enter amount of ₹1 or more."
+                            reason.trim().length !in 3..200 -> quoteError = "Enter a reason (3–200 chars)."
+                            else -> onSendQuote(bk, minor, reason.trim()) { quoteTarget = null }
                         }
                     },
+                    enabled = !isBusy,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
                 ) { Text("Send") }
             },
             dismissButton = {
-                TextButton(onClick = { quoteTarget = null }) { Text("Cancel", color = ClickitTextSecondary) }
+                TextButton(onClick = { quoteTarget = null }, enabled = !isBusy) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
@@ -651,13 +658,14 @@ fun WorkerDukaanScreen(
         var hours by remember(baseShop.id) { mutableStateOf(baseShop.hoursSummary) }
         var capacity by remember(baseShop.id) { mutableStateOf(baseShop.dailyCapacity.toString()) }
         var startPrice by remember(baseShop.id) { mutableStateOf((baseShop.startingPriceMinor / 100L).coerceAtLeast(1L).toString()) }
+        var shopError by remember(baseShop.id) { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = { showShopEditor = false },
             containerColor = ClickitLightSurface,
             title = { Text(if (primaryShop == null) "Create Shop" else "Edit Shop", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Shop Name *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = name, onValueChange = { name = it; shopError = null }, label = { Text("Shop Name *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         ServiceCategory.entries.forEach { cat ->
                             FilterChip(
@@ -679,14 +687,14 @@ fun WorkerDukaanScreen(
                             )
                         }
                     }
-                    OutlinedTextField(value = locality, onValueChange = { locality = it }, label = { Text("Area *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = addressSummary, onValueChange = { addressSummary = it }, label = { Text("Address *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = locality, onValueChange = { locality = it; shopError = null }, label = { Text("Area *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = addressSummary, onValueChange = { addressSummary = it; shopError = null }, label = { Text("Address *") }, shape = RoundedCornerShape(10.dp))
                     OutlinedTextField(value = tagline, onValueChange = { tagline = it }, label = { Text("Tagline") }, singleLine = true, shape = RoundedCornerShape(10.dp))
                     OutlinedTextField(value = hours, onValueChange = { hours = it }, label = { Text("Hours") }, singleLine = true, shape = RoundedCornerShape(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = startPrice,
-                            onValueChange = { startPrice = it },
+                            onValueChange = { startPrice = it; shopError = null },
                             label = { Text("Min ₹ *") },
                             singleLine = true,
                             shape = RoundedCornerShape(10.dp),
@@ -694,31 +702,43 @@ fun WorkerDukaanScreen(
                         )
                         OutlinedTextField(
                             value = capacity,
-                            onValueChange = { capacity = it },
+                            onValueChange = { capacity = it; shopError = null },
                             label = { Text("Capacity *") },
                             singleLine = true,
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         )
                     }
+                    if (shopError != null) {
+                        Text(shopError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val priceMinor = ((startPrice.toDoubleOrNull() ?: 15.0) * 100.0).toLong().coerceAtLeast(100L)
-                        onSaveShop(
-                            baseShop.copy(
-                                shopName = name,
-                                category = category.key,
-                                locality = locality,
-                                addressSummary = addressSummary,
-                                tagline = tagline,
-                                hoursSummary = hours,
-                                startingPriceMinor = priceMinor,
-                                dailyCapacity = capacity.toLongOrNull()?.coerceIn(1L, 500L) ?: 30L
-                            )
-                        ) { showShopEditor = false }
+                        val parsedPrice = startPrice.trim().toDoubleOrNull()
+                        val priceMinor = parsedPrice?.let { kotlin.math.round(it * 100.0).toLong() } ?: 0L
+                        val cap = capacity.trim().toLongOrNull()
+                        when {
+                            name.trim().length !in 2..80 -> shopError = "Shop name must be 2–80 chars."
+                            locality.trim().length !in 1..80 -> shopError = "Area is required."
+                            addressSummary.trim().length !in 1..160 -> shopError = "Address is required."
+                            parsedPrice == null || priceMinor < 100L -> shopError = "Minimum price must be ₹1+."
+                            cap == null || cap !in 1L..500L -> shopError = "Capacity must be 1–500."
+                            else -> onSaveShop(
+                                baseShop.copy(
+                                    shopName = name.trim(),
+                                    category = category.key,
+                                    locality = locality.trim(),
+                                    addressSummary = addressSummary.trim(),
+                                    tagline = tagline.trim().take(140),
+                                    hoursSummary = hours.trim().ifBlank { "9:00 AM – 8:00 PM" },
+                                    startingPriceMinor = priceMinor,
+                                    dailyCapacity = cap
+                                )
+                            ) { showShopEditor = false }
+                        }
                     },
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
@@ -740,11 +760,12 @@ fun WorkerDukaanScreen(
             turnaroundHours = 24L,
             active = true
         )
-        var name by remember { mutableStateOf(base.name) }
-        var desc by remember { mutableStateOf(base.description) }
-        var unit by remember { mutableStateOf(base.unit) }
-        var priceRupees by remember { mutableStateOf((base.priceMinor / 100L).toString()) }
-        var turnaround by remember { mutableStateOf(base.turnaroundHours.toString()) }
+        var name by remember(base.id) { mutableStateOf(base.name) }
+        var desc by remember(base.id) { mutableStateOf(base.description) }
+        var unit by remember(base.id) { mutableStateOf(base.unit) }
+        var priceRupees by remember(base.id) { mutableStateOf((base.priceMinor / 100L).toString()) }
+        var turnaround by remember(base.id) { mutableStateOf(base.turnaroundHours.toString()) }
+        var svcError by remember(base.id) { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = {
                 showAddService = false
@@ -754,29 +775,40 @@ fun WorkerDukaanScreen(
             title = { Text(if (editingService == null) "Add Service" else "Edit Service", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = name, onValueChange = { name = it; svcError = null }, label = { Text("Name *") }, shape = RoundedCornerShape(10.dp))
                     OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Unit (cloth/kg/pair) *") }, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = priceRupees, onValueChange = { priceRupees = it }, label = { Text("Price (₹) *") }, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = turnaround, onValueChange = { turnaround = it }, label = { Text("Hours *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = unit, onValueChange = { unit = it; svcError = null }, label = { Text("Unit (cloth/kg/pair) *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = priceRupees, onValueChange = { priceRupees = it; svcError = null }, label = { Text("Price (₹) *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = turnaround, onValueChange = { turnaround = it; svcError = null }, label = { Text("Hours *") }, shape = RoundedCornerShape(10.dp))
+                    if (svcError != null) {
+                        Text(svcError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val minor = ((priceRupees.toDoubleOrNull() ?: 15.0) * 100.0).toLong().coerceAtLeast(100L)
-                        onSaveService(
-                            primaryShop.id,
-                            base.copy(
-                                name = name,
-                                description = desc,
-                                unit = unit,
-                                priceMinor = minor,
-                                turnaroundHours = turnaround.toLongOrNull()?.coerceIn(1L, 720L) ?: 24L
-                            )
-                        ) {
-                            showAddService = false
-                            editingService = null
+                        val parsedPrice = priceRupees.trim().toDoubleOrNull()
+                        val minor = parsedPrice?.let { kotlin.math.round(it * 100.0).toLong() } ?: 0L
+                        val hoursVal = turnaround.trim().toLongOrNull()
+                        when {
+                            name.trim().length !in 2..80 -> svcError = "Service name must be 2–80 chars."
+                            unit.trim().length !in 1..24 -> svcError = "Unit is required."
+                            parsedPrice == null || minor !in 100L..10000000L -> svcError = "Price must be ₹1 or more."
+                            hoursVal == null || hoursVal !in 1L..720L -> svcError = "Turnaround must be 1–720 hours."
+                            else -> onSaveService(
+                                primaryShop.id,
+                                base.copy(
+                                    name = name.trim(),
+                                    description = desc.trim().take(200),
+                                    unit = unit.trim(),
+                                    priceMinor = minor,
+                                    turnaroundHours = hoursVal
+                                )
+                            ) {
+                                showAddService = false
+                                editingService = null
+                            }
                         }
                     },
                     shape = RoundedCornerShape(10.dp),

@@ -170,7 +170,7 @@ fun ProfileAndSupportScreen(
     onSaveProfile: (String, String, String, Uri?, Boolean, () -> Unit) -> Unit,
     onSaveAddress: (SavedAddress, () -> Unit) -> Unit,
     onDeleteAddress: (String) -> Unit,
-    onCreateTicket: (String, String, String) -> Unit,
+    onCreateTicket: (String, String, String, () -> Unit) -> Unit,
     onRetry: () -> Unit = {},
     onSignOut: () -> Unit
 ) {
@@ -367,45 +367,59 @@ fun ProfileAndSupportScreen(
         var city by remember { mutableStateOf(defaultCity) }
         var postal by remember { mutableStateOf("") }
         var instructions by remember { mutableStateOf("") }
+        var addrError by remember { mutableStateOf<String?>(null) }
         AlertDialog(
-            onDismissRequest = { showAddressDialog = false },
+            onDismissRequest = { if (!isBusy) showAddressDialog = false },
             containerColor = ClickitLightSurface,
             title = { Text("Add Address", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = houseNo, onValueChange = { houseNo = it }, label = { Text("House / Flat *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = street, onValueChange = { street = it }, label = { Text("Street *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = locality, onValueChange = { locality = it }, label = { Text("Locality *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = label, onValueChange = { label = it; addrError = null }, label = { Text("Label *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = houseNo, onValueChange = { houseNo = it; addrError = null }, label = { Text("House / Flat *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = street, onValueChange = { street = it; addrError = null }, label = { Text("Street *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = locality, onValueChange = { locality = it; addrError = null }, label = { Text("Locality *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("City *") }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
-                        OutlinedTextField(value = postal, onValueChange = { postal = it }, label = { Text("PIN *") }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = city, onValueChange = { city = it; addrError = null }, label = { Text("City *") }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = postal, onValueChange = { postal = it; addrError = null }, label = { Text("PIN *") }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
                     }
                     OutlinedTextField(value = instructions, onValueChange = { instructions = it }, label = { Text("Instructions") }, shape = RoundedCornerShape(10.dp))
+                    if (addrError != null) {
+                        Text(addrError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onSaveAddress(
-                            SavedAddress(
-                                label = label,
-                                houseNo = houseNo,
-                                street = street,
-                                locality = locality,
-                                city = city.ifBlank { locality },
-                                postalCode = postal,
-                                instructions = instructions,
-                                defaultAddress = addresses.isEmpty()
-                            )
-                        ) { showAddressDialog = false }
+                        val resolvedCity = city.trim().ifBlank { locality.trim() }
+                        when {
+                            label.trim().length !in 1..30 -> addrError = "Label required (max 30 chars)."
+                            houseNo.trim().length !in 1..60 -> addrError = "House / Flat no. required."
+                            street.trim().length !in 1..100 -> addrError = "Street required."
+                            locality.trim().length !in 1..60 -> addrError = "Locality required."
+                            resolvedCity.length !in 1..50 -> addrError = "City required."
+                            postal.trim().length !in 3..12 -> addrError = "Valid PIN code required."
+                            else -> onSaveAddress(
+                                SavedAddress(
+                                    label = label.trim(),
+                                    houseNo = houseNo.trim(),
+                                    street = street.trim(),
+                                    locality = locality.trim(),
+                                    city = resolvedCity,
+                                    postalCode = postal.trim(),
+                                    instructions = instructions.trim().take(160),
+                                    defaultAddress = addresses.isEmpty()
+                                )
+                            ) { showAddressDialog = false }
+                        }
                     },
+                    enabled = !isBusy,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
                 ) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = { showAddressDialog = false }) { Text("Cancel", color = ClickitTextSecondary) }
+                TextButton(onClick = { showAddressDialog = false }, enabled = !isBusy) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
@@ -414,29 +428,39 @@ fun ProfileAndSupportScreen(
         var category by remember { mutableStateOf("Order & Pickup") }
         var subject by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
+        var ticketError by remember { mutableStateOf<String?>(null) }
         AlertDialog(
-            onDismissRequest = { showTicketDialog = false },
+            onDismissRequest = { if (!isBusy) showTicketDialog = false },
             containerColor = ClickitLightSurface,
             title = { Text("Support", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") }, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject *") }, shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Details *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = subject, onValueChange = { subject = it; ticketError = null }, label = { Text("Subject *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = description, onValueChange = { description = it; ticketError = null }, label = { Text("Details *") }, shape = RoundedCornerShape(10.dp))
+                    if (ticketError != null) {
+                        Text(ticketError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onCreateTicket(category, subject, description)
-                        showTicketDialog = false
+                        when {
+                            subject.trim().length !in 3..100 -> ticketError = "Subject must be 3–100 chars."
+                            description.trim().length !in 5..400 -> ticketError = "Details must be 5–400 chars."
+                            else -> onCreateTicket(category.trim(), subject.trim(), description.trim()) {
+                                showTicketDialog = false
+                            }
+                        }
                     },
+                    enabled = !isBusy,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
                 ) { Text("Submit") }
             },
             dismissButton = {
-                TextButton(onClick = { showTicketDialog = false }) { Text("Cancel", color = ClickitTextSecondary) }
+                TextButton(onClick = { showTicketDialog = false }, enabled = !isBusy) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }

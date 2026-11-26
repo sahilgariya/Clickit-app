@@ -152,8 +152,8 @@ service cloud.firestore {
              isStr(data.addressLabel, 1, 40) &&
              isStr(data.addressSummary, 1, 200) &&
              isStr(data.parcelCode, 4, 24) &&
-             isStr(data.handoverOtp, 4, 8) &&
-             isStr(data.deliveryOtp, 4, 8) &&
+             data.handoverOtp is string && data.handoverOtp.matches('^[0-9]{4,8}$') &&
+             data.deliveryOtp is string && data.deliveryOtp.matches('^[0-9]{4,8}$') &&
              isStr(data.itemsSummary, 1, 240) &&
              data.itemCount is int && data.itemCount >= 1 && data.itemCount <= 500 &&
              data.weightKg is number && data.weightKg >= 0 && data.weightKg <= 500 &&
@@ -169,6 +169,31 @@ service cloud.firestore {
              isOptStr(data, 'reviewText', 300) &&
              isOptStr(data, 'cancellationReason', 160) &&
              isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidBookingMutation(data) {
+      return isOptStr(data, 'assignedPartnerId', 128) &&
+             data.status in [
+               'requested', 'accepted', 'quote_pending', 'confirmed',
+               'pickup_scheduled', 'picked_up', 'received_by_worker',
+               'in_progress', 'ready', 'return_scheduled',
+               'out_for_delivery', 'delivered', 'completed',
+               'cancelled', 'disputed'
+             ] &&
+             data.quoteStatus in ['estimated', 'awaiting_worker_confirmation', 'quote_revision_sent', 'confirmed'] &&
+             isOptStr(data, 'quoteNote', 200) &&
+             data.serviceSubtotalMinor is int && data.serviceSubtotalMinor >= 0 && data.serviceSubtotalMinor <= 100000000 &&
+             data.deliveryFeeMinor is int && data.deliveryFeeMinor >= 0 && data.deliveryFeeMinor <= 1000000 &&
+             data.platformFeeMinor is int && data.platformFeeMinor >= 0 && data.platformFeeMinor <= 1000000 &&
+             data.totalMinor is int && data.totalMinor >= 0 && data.totalMinor <= 100000000 &&
+             data.paymentStatus in ['pending', 'paid', 'refunded'] &&
+             isOptStr(data, 'paymentMethod', 32) &&
+             isOptStr(data, 'paymentRef', 64) &&
+             isStr(data.milestone, 0, 60) &&
+             data.ratingStars is int && data.ratingStars >= 0 && data.ratingStars <= 5 &&
+             isOptStr(data, 'reviewText', 300) &&
+             isOptStr(data, 'cancellationReason', 160) &&
              isValidTimestamp(data.updatedAt);
     }
 
@@ -335,18 +360,15 @@ service cloud.firestore {
       allow update: if isSignedIn() &&
                        isValidId(shopId) &&
                        isValidShop(incoming()) &&
+                       existing().ownerId == request.auth.uid &&
                        incoming().ownerId == existing().ownerId &&
-                       incoming().createdAt == existing().createdAt && (
-                         (existing().ownerId == request.auth.uid &&
-                          incoming().diff(existing()).affectedKeys().hasOnly([
-                            'shopName', 'category', 'tagline', 'locality', 'addressSummary',
-                            'hoursSummary', 'turnaroundLabel', 'openStatus', 'published',
-                            'supportsShopDrop', 'supportsWorkerDelivery', 'supportsClickitBatch',
-                            'dailyCapacity', 'activeLoad', 'startingPriceMinor', 'startingPriceUnit', 'updatedAt'
-                          ])) ||
-                         (existing().published == true &&
-                          incoming().diff(existing()).affectedKeys().hasOnly(['ratingAvg', 'ratingCount', 'activeLoad', 'updatedAt']))
-                       );
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'shopName', 'category', 'tagline', 'locality', 'addressSummary',
+                         'hoursSummary', 'turnaroundLabel', 'openStatus', 'published',
+                         'supportsShopDrop', 'supportsWorkerDelivery', 'supportsClickitBatch',
+                         'dailyCapacity', 'startingPriceMinor', 'startingPriceUnit', 'updatedAt'
+                       ]);
 
       allow delete: if isSignedIn() && isValidId(shopId) && existing().ownerId == request.auth.uid;
 
@@ -420,46 +442,70 @@ service cloud.firestore {
                          'createdAt', 'updatedAt'
                        ]) &&
                        isValidBooking(incoming()) &&
-                       exists(/databases/$(database)/documents/shops/$(incoming().shopId));
+                       incoming().platformFeeMinor >= 100 &&
+                       incoming().totalMinor == incoming().serviceSubtotalMinor + incoming().deliveryFeeMinor + incoming().platformFeeMinor &&
+                       exists(/databases/$(database)/documents/shops/$(incoming().shopId)) &&
+                       get(/databases/$(database)/documents/shops/$(incoming().shopId)).data.ownerId == incoming().workerOwnerId;
 
       allow update: if isSignedIn() &&
                        isValidId(bookingId) &&
-                       isValidBooking(incoming()) &&
                        incoming().customerId == existing().customerId &&
                        incoming().workerOwnerId == existing().workerOwnerId &&
                        incoming().shopId == existing().shopId &&
-                       incoming().createdAt == existing().createdAt && (
-                         // Terminal completed: only one-time rating submission by customer
+                       incoming().createdAt == existing().createdAt &&
+                       isValidBookingMutation(incoming()) && (
+                         // 1) Terminal completed: only one-time rating submission by customer
                          (existing().status == 'completed' &&
                           existing().customerId == request.auth.uid &&
                           existing().ratingStars == 0 &&
                           incoming().status == 'completed' &&
                           incoming().diff(existing()).affectedKeys().hasOnly(['ratingStars', 'reviewText', 'updatedAt'])) ||
-                         // Non-terminal transitions
+                         // 2) Customer quote approval, payment, receipt completion (paid only), or cancel/refund
+                         (existing().customerId == request.auth.uid &&
+                          existing().status != 'completed' &&
+                          existing().status != 'cancelled' &&
+                          incoming().status in [existing().status, 'pickup_scheduled', 'confirmed', 'completed', 'cancelled'] &&
+                          (incoming().status != 'completed' || existing().paymentStatus == 'paid') &&
+                          (
+                            incoming().paymentStatus == existing().paymentStatus ||
+                            (existing().paymentStatus == 'pending' &&
+                             incoming().paymentStatus == 'paid' &&
+                             'paymentMethod' in incoming() && isStr(incoming().paymentMethod, 1, 32) &&
+                             'paymentRef' in incoming() && isStr(incoming().paymentRef, 1, 64)) ||
+                            (existing().paymentStatus == 'paid' &&
+                             incoming().paymentStatus == 'refunded' &&
+                             incoming().status == 'cancelled')
+                          ) &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'status', 'quoteStatus', 'paymentStatus', 'paymentMethod', 'paymentRef',
+                            'cancellationReason', 'updatedAt'
+                          ])) ||
+                         // 3) Worker accept, quote revision, receive, progress, ready, handover
+                         (existing().workerOwnerId == request.auth.uid &&
+                          existing().status != 'completed' &&
+                          existing().status != 'cancelled' &&
+                          incoming().status in [
+                            existing().status, 'accepted', 'quote_pending', 'confirmed',
+                            'pickup_scheduled', 'received_by_worker', 'in_progress',
+                            'ready', 'return_scheduled', 'cancelled'
+                          ] &&
+                          incoming().totalMinor == incoming().serviceSubtotalMinor + incoming().deliveryFeeMinor + incoming().platformFeeMinor &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'status', 'quoteStatus', 'quoteNote',
+                            'serviceSubtotalMinor', 'deliveryFeeMinor', 'platformFeeMinor', 'totalMinor',
+                            'milestone', 'cancellationReason', 'updatedAt'
+                          ])) ||
+                         // 4) Delivery partner claim or custody/delivery progress
                          (existing().status != 'completed' &&
-                          existing().status != 'cancelled' && (
-                            // Action: Customer quote approval, payment, receipt confirmation, or cancel
-                            (existing().customerId == request.auth.uid &&
-                             incoming().diff(existing()).affectedKeys().hasOnly([
-                               'status', 'quoteStatus', 'paymentStatus', 'paymentMethod', 'paymentRef',
-                               'serviceSubtotalMinor', 'deliveryFeeMinor', 'platformFeeMinor', 'totalMinor',
-                               'cancellationReason', 'updatedAt'
-                             ])) ||
-                            // Action: Worker accept, quote revision, receive, progress, ready, handover
-                            (existing().workerOwnerId == request.auth.uid &&
-                             incoming().diff(existing()).affectedKeys().hasOnly([
-                               'status', 'quoteStatus', 'quoteNote',
-                               'serviceSubtotalMinor', 'deliveryFeeMinor', 'platformFeeMinor', 'totalMinor',
-                               'milestone', 'cancellationReason', 'updatedAt'
-                             ])) ||
-                            // Action: Delivery partner claim or custody/delivery progress
-                            ((('assignedPartnerId' in existing() && existing().assignedPartnerId == request.auth.uid) ||
-                              ((!('assignedPartnerId' in existing()) || existing().status in ['pickup_scheduled', 'return_scheduled']) &&
-                               incoming().assignedPartnerId == request.auth.uid)) &&
-                             incoming().diff(existing()).affectedKeys().hasOnly([
-                               'assignedPartnerId', 'status', 'milestone', 'updatedAt'
-                             ]))
-                          ))
+                          existing().status != 'cancelled' &&
+                          (('assignedPartnerId' in existing() && existing().assignedPartnerId == request.auth.uid) ||
+                           (existing().status in ['pickup_scheduled', 'return_scheduled'] &&
+                            (!('assignedPartnerId' in existing()) || existing().status == 'return_scheduled') &&
+                            incoming().assignedPartnerId == request.auth.uid)) &&
+                          incoming().status in [existing().status, 'picked_up', 'received_by_worker', 'out_for_delivery', 'delivered'] &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'assignedPartnerId', 'status', 'milestone', 'updatedAt'
+                          ]))
                        );
 
       match /timeline/{eventId} {
@@ -519,7 +565,9 @@ service cloud.firestore {
                          'createdAt', 'updatedAt'
                        ]) &&
                        isValidDeliveryTask(incoming()) &&
-                       exists(/databases/$(database)/documents/bookings/$(incoming().bookingId));
+                       exists(/databases/$(database)/documents/bookings/$(incoming().bookingId)) &&
+                       get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.customerId == incoming().customerId &&
+                       get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.workerOwnerId == incoming().workerOwnerId;
 
       allow update: if isSignedIn() &&
                        isValidId(taskId) &&
