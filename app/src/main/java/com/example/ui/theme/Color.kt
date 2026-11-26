@@ -2,27 +2,40 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Clickit – Refined Minimal Dark Palette (WhatsApp / Modern Consumer Polish)
-val ClickitMidnight = Color(0xFF0E131F)       // Primary calm obsidian-navy canvas
-val ClickitSlateDeep = Color(0xFF171E2E)      // Elevated cards & clean secondary surface
-val ClickitSlate = Color(0xFF252E44)          // Subtle borders, tonal chips, pressed surface
-val ClickitPeach = Color(0xFFFDA481)          // Primary CTA & warm signature accent
-val ClickitPeachSoft = Color(0xFFFFD8C7)      // Soft peach text/highlight
-val ClickitCrimson = Color(0xFFE0485A)        // Destructive, urgent alerts, errors
-val ClickitBurgundy = Color(0xFF3A1A29)       // Soft alert containers & subtle accent badges
+// Clickit – Crisp Commercial Light Palette (Royal Cobalt & Clean Slate Neutrals)
+val ClickitBrandPrimary = Color(0xFF2563EB)    // Primary brand Royal Cobalt
+val ClickitBrandDark = Color(0xFF1E40AF)       // Deep Royal Indigo for pressed/high-contrast states
+val ClickitBrandTint = Color(0xFFEFF6FF)       // Soft ice-blue tint for selected states & chips
 
-// Semantic & Surface Neutrals
-val ClickitIvory = Color(0xFFF5F7FA)          // Crisp high-contrast primary text on dark
-val ClickitMutedText = Color(0xFF9BA5BD)      // Calm secondary body/caption text
-val ClickitSubtleLine = Color(0xFF2B354D)     // Hairline dividers on dark cards
-val ClickitSuccess = Color(0xFF3DDC84)        // Verified / Free delivery / completed green
-val ClickitSuccessContainer = Color(0xFF123225)
-val ClickitWarning = Color(0xFFFBBF24)        // Quote pending / amber warning
-val ClickitWarningContainer = Color(0xFF332610)
-val ClickitInfo = Color(0xFF60C8FA)           // Smart Batch / in-transit sky cyan
-val ClickitInfoContainer = Color(0xFF112C3E)
+// Neutral Surfaces & Text
+val ClickitLightBg = Color(0xFFF8FAFC)         // Clean alabaster app canvas
+val ClickitLightSurface = Color(0xFFFFFFFF)    // Pure white cards, headers, bottom bars
+val ClickitLightSurfaceVar = Color(0xFFF1F5F9) // Soft slate grey for inputs, chips & tiles
+val ClickitTextPrimary = Color(0xFF0F172A)     // Rich slate-black readable text
+val ClickitTextSecondary = Color(0xFF64748B)   // Balanced muted slate captions & metadata
+val ClickitBorder = Color(0xFFE2E8F0)          // Crisp hairline borders
+val ClickitBorderStrong = Color(0xFFCBD5E1)    // Subtle stronger dividers
 
-// Light fallback palette (maintaining Clickit brand anchors)
-val ClickitLightBg = Color(0xFFF8F9FB)
-val ClickitLightSurface = Color(0xFFFFFFFF)
-val ClickitLightSurfaceVar = Color(0xFFECEFF5)
+// Accessible Semantic Status Colors
+val ClickitSuccess = Color(0xFF16A34A)         // Accessible green (Free >5kg, verified, done)
+val ClickitSuccessContainer = Color(0xFFF0FDF4)
+val ClickitWarning = Color(0xFFD97706)         // Accessible amber (Quotes, Urgent, Delay)
+val ClickitWarningContainer = Color(0xFFFFFBEB)
+val ClickitCrimson = Color(0xFFDC2626)         // Accessible error / destructive
+val ClickitDangerContainer = Color(0xFFFEF2F2)
+val ClickitInfo = ClickitBrandPrimary
+val ClickitInfoContainer = ClickitBrandTint
+
+// Compatibility aliases mapped cleanly to the Royal Cobalt commercial palette
+val ClickitBrandTeal = ClickitBrandPrimary
+val ClickitBrandTealDark = ClickitBrandDark
+val ClickitBrandTealTint = ClickitBrandTint
+val ClickitMidnight = ClickitLightBg
+val ClickitSlateDeep = ClickitLightSurface
+val ClickitSlate = ClickitLightSurfaceVar
+val ClickitPeach = ClickitBrandPrimary
+val ClickitPeachSoft = ClickitBrandDark
+val ClickitBurgundy = ClickitBrandTint
+val ClickitIvory = ClickitTextPrimary
+val ClickitMutedText = ClickitTextSecondary
+val ClickitSubtleLine = ClickitBorder

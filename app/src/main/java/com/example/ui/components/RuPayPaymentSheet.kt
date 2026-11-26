@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,17 +54,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.data.Booking
 import com.example.data.formatInr
-import com.example.ui.theme.ClickitBurgundy
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
 import com.example.ui.theme.ClickitCrimson
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
+import com.example.ui.theme.ClickitDangerContainer
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
 import com.example.ui.theme.ClickitSuccess
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -83,21 +83,21 @@ fun RuPayPaymentSheet(
     var errorText by remember { mutableStateOf<String?>(null) }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = ClickitPeach,
-        unfocusedBorderColor = ClickitSlate,
-        focusedTextColor = ClickitIvory,
-        unfocusedTextColor = ClickitIvory,
-        focusedLabelColor = ClickitPeach,
-        unfocusedLabelColor = ClickitMutedText,
-        focusedContainerColor = ClickitSlateDeep,
-        unfocusedContainerColor = ClickitSlateDeep
+        focusedBorderColor = ClickitBrandTeal,
+        unfocusedBorderColor = ClickitBorder,
+        focusedTextColor = ClickitTextPrimary,
+        unfocusedTextColor = ClickitTextPrimary,
+        focusedLabelColor = ClickitBrandTeal,
+        unfocusedLabelColor = ClickitTextSecondary,
+        focusedContainerColor = ClickitLightSurface,
+        unfocusedContainerColor = ClickitLightSurface
     )
 
     ModalBottomSheet(
         onDismissRequest = { if (!isBusy) onDismiss() },
         sheetState = sheetState,
-        containerColor = ClickitMidnight,
-        contentColor = ClickitIvory
+        containerColor = ClickitLightSurface,
+        contentColor = ClickitTextPrimary
     ) {
         Column(
             modifier = Modifier
@@ -106,7 +106,6 @@ fun RuPayPaymentSheet(
                 .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header with RuPay badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -114,52 +113,50 @@ fun RuPayPaymentSheet(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "RuPay Checkout",
-                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                        color = ClickitIvory
+                        text = "Payment",
+                        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = ClickitTextPrimary
                     )
                     Text(
                         text = "${booking.shopName} • ${booking.parcelCode}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = ClickitMutedText
+                        color = ClickitTextSecondary
                     )
                 }
                 Surface(
-                    color = ClickitBurgundy,
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.65f))
+                    color = ClickitBrandTealTint,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, ClickitBrandTeal.copy(alpha = 0.3f))
                 ) {
                     Text(
                         text = "RuPay",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = ClickitPeach,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        color = ClickitBrandTeal,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
             }
 
-            // Amount summary
             Surface(
-                color = ClickitSlateDeep,
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, ClickitSlate),
+                color = ClickitLightBg,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, ClickitBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Payable Amount", style = MaterialTheme.typography.bodyMedium, color = ClickitMutedText)
+                    Text("Total", style = MaterialTheme.typography.bodyMedium, color = ClickitTextSecondary)
                     Text(
                         text = formatInr(booking.totalMinor),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = ClickitPeach
+                        color = ClickitBrandTeal
                     )
                 }
             }
 
-            // Mode selector: RuPay on UPI / RuPay Card
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -197,10 +194,11 @@ fun RuPayPaymentSheet(
                         upiId = it.trim()
                         errorText = null
                     },
-                    label = { Text("Enter UPI ID linked to RuPay") },
-                    placeholder = { Text("e.g. name@oksbi") },
+                    label = { Text("UPI ID") },
+                    placeholder = { Text("name@oksbi") },
                     singleLine = true,
                     colors = fieldColors,
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("rupay_upi_input")
@@ -216,9 +214,17 @@ fun RuPayPaymentSheet(
                                 errorText = null
                             },
                             label = { Text(suffix) },
+                            shape = RoundedCornerShape(8.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = ClickitPeach,
-                                selectedLabelColor = ClickitMidnight
+                                selectedContainerColor = ClickitBrandTeal,
+                                selectedLabelColor = Color.White,
+                                containerColor = ClickitLightBg,
+                                labelColor = ClickitTextPrimary
+                            ),
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = upiId.endsWith(suffix),
+                                borderColor = ClickitBorder
                             )
                         )
                     }
@@ -230,9 +236,9 @@ fun RuPayPaymentSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "16-digit RuPay Debit / Credit Card",
+                        text = "Card details",
                         style = MaterialTheme.typography.labelMedium,
-                        color = ClickitMutedText
+                        color = ClickitTextSecondary
                     )
                     TextButton(
                         onClick = {
@@ -242,7 +248,7 @@ fun RuPayPaymentSheet(
                             errorText = null
                         }
                     ) {
-                        Text("Use Test RuPay", color = ClickitInfo)
+                        Text("Test card", color = ClickitBrandTeal)
                     }
                 }
 
@@ -252,11 +258,12 @@ fun RuPayPaymentSheet(
                         cardNumber = raw.filter { it.isDigit() }.take(16)
                         errorText = null
                     },
-                    label = { Text("RuPay Card Number") },
+                    label = { Text("Card number") },
                     placeholder = { Text("6070 •••• •••• 5678") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     colors = fieldColors,
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("rupay_card_number_input")
@@ -270,11 +277,12 @@ fun RuPayPaymentSheet(
                             cardExpiry = if (clean.length > 2) "${clean.take(2)}/${clean.drop(2)}" else clean
                             errorText = null
                         },
-                        label = { Text("Expiry (MM/YY)") },
+                        label = { Text("Expiry") },
                         placeholder = { Text("08/29") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = fieldColors,
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1f)
                             .testTag("rupay_card_expiry_input")
@@ -291,6 +299,7 @@ fun RuPayPaymentSheet(
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         colors = fieldColors,
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .weight(1f)
                             .testTag("rupay_card_cvv_input")
@@ -300,14 +309,14 @@ fun RuPayPaymentSheet(
 
             if (errorText != null) {
                 Surface(
-                    color = ClickitCrimson.copy(alpha = 0.25f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, ClickitCrimson)
+                    color = ClickitDangerContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, ClickitCrimson.copy(alpha = 0.4f))
                 ) {
                     Text(
                         text = errorText!!,
                         style = MaterialTheme.typography.bodySmall,
-                        color = ClickitPeachSoft,
+                        color = ClickitCrimson,
                         modifier = Modifier.padding(10.dp)
                     )
                 }
@@ -324,9 +333,9 @@ fun RuPayPaymentSheet(
                     modifier = Modifier.size(15.dp)
                 )
                 Text(
-                    text = "Protected by Clickit Escrow • Instant refund on cancellation",
+                    text = "Escrow protected • Auto-refund on cancel",
                     style = MaterialTheme.typography.labelSmall,
-                    color = ClickitMutedText
+                    color = ClickitTextSecondary
                 )
             }
 
@@ -336,20 +345,20 @@ fun RuPayPaymentSheet(
                         val clean = upiId.trim()
                         val parts = clean.split("@")
                         if (clean.length < 5 || parts.size != 2 || parts[0].isBlank() || parts[1].length < 2) {
-                            errorText = "Enter a valid UPI ID (e.g. name@oksbi)."
+                            errorText = "Enter a valid UPI ID."
                             return@Button
                         }
                         onConfirmPayment("rupay_upi", "RuPay UPI ($clean)")
                     } else {
                         val digits = cardNumber.filter { it.isDigit() }
                         if (digits.length != 16) {
-                            errorText = "Enter a valid 16-digit RuPay card number."
+                            errorText = "Enter 16-digit card number."
                             return@Button
                         }
                         val expiryDigits = cardExpiry.filter { it.isDigit() }
                         val month = expiryDigits.take(2).toIntOrNull() ?: 0
                         if (expiryDigits.length != 4 || month !in 1..12) {
-                            errorText = "Enter valid expiry as MM/YY."
+                            errorText = "Enter valid expiry (MM/YY)."
                             return@Button
                         }
                         if (cardCvv.length != 3) {
@@ -361,30 +370,30 @@ fun RuPayPaymentSheet(
                 },
                 enabled = !isBusy,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = ClickitPeach,
-                    contentColor = ClickitMidnight
+                    containerColor = ClickitBrandTeal,
+                    contentColor = Color.White
                 ),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp)
+                    .height(48.dp)
                     .minimumInteractiveComponentSize()
                     .testTag("confirm_rupay_payment_button")
             ) {
                 if (isBusy) {
                     CircularProgressIndicator(
-                        color = ClickitMidnight,
+                        color = Color.White,
                         strokeWidth = 2.5.dp,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(10.dp))
-                    Text("Processing RuPay...")
+                    Text("Processing...")
                 } else {
                     Icon(Icons.Filled.VerifiedUser, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "Pay ${formatInr(booking.totalMinor)} via RuPay",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        text = "Pay ${formatInr(booking.totalMinor)}",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }
             }
@@ -403,9 +412,9 @@ private fun RuPayModeOption(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = if (selected) ClickitBurgundy else ClickitSlateDeep,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.2.dp, if (selected) ClickitPeach else ClickitSlate),
+        color = if (selected) ClickitBrandTealTint else ClickitLightSurface,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, if (selected) ClickitBrandTeal else ClickitBorder),
         modifier = modifier
             .minimumInteractiveComponentSize()
             .clickable(onClick = onClick)
@@ -418,13 +427,13 @@ private fun RuPayModeOption(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (selected) ClickitPeach else ClickitMutedText,
+                tint = if (selected) ClickitBrandTeal else ClickitTextSecondary,
                 modifier = Modifier.size(18.dp)
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = if (selected) ClickitIvory else ClickitMutedText
+                color = if (selected) ClickitBrandTeal else ClickitTextSecondary
             )
         }
     }

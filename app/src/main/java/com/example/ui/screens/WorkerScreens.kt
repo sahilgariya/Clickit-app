@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,20 +74,17 @@ import com.example.ui.components.EmptyStateCard
 import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.NeonIconBadge
-import com.example.ui.theme.ClickitBurgundy
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBorderStrong
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealDark
+import com.example.ui.theme.ClickitBrandTealTint
 import com.example.ui.theme.ClickitCrimson
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitInfoContainer
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitLightSurface
 import com.example.ui.theme.ClickitSuccess
 import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 import com.example.ui.theme.ClickitWarning
 import com.example.ui.theme.ClickitWarningContainer
 
@@ -121,7 +119,7 @@ fun WorkerDashboardScreen(
                 EmptyStateCard(
                     icon = Icons.Filled.Storefront,
                     title = "No shop yet",
-                    subtitle = "Create your shop to receive orders.",
+                    subtitle = "Add your shop to get started.",
                     actionLabel = "Create Shop",
                     onAction = onOpenDukaanTab
                 )
@@ -129,11 +127,12 @@ fun WorkerDashboardScreen(
         } else {
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitSubtleLine),
-                    shape = RoundedCornerShape(16.dp)
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    border = BorderStroke(1.dp, ClickitBorder),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -141,22 +140,21 @@ fun WorkerDashboardScreen(
                         ) {
                             NeonIconBadge(
                                 icon = Icons.Filled.Storefront,
-                                tint = ClickitPeach,
-                                glowColor = if (primaryShop.openStatus) ClickitSuccess else ClickitPeach,
-                                size = 44.dp,
-                                iconSize = 22.dp,
-                                shape = RoundedCornerShape(14.dp)
+                                tint = ClickitBrandTeal,
+                                size = 42.dp,
+                                iconSize = 20.dp,
+                                shape = RoundedCornerShape(10.dp)
                             )
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("MY SHOP", style = MaterialTheme.typography.labelSmall, color = ClickitPeach)
-                                Text(primaryShop.shopName, style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
-                                Text("${primaryShop.locality} • ${primaryShop.hoursSummary}", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                                Text("SHOP", style = MaterialTheme.typography.labelSmall, color = ClickitBrandTeal)
+                                Text(primaryShop.shopName, style = MaterialTheme.typography.titleLarge, color = ClickitTextPrimary)
+                                Text("${primaryShop.locality} • ${primaryShop.hoursSummary}", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                             }
                             Switch(
                                 checked = primaryShop.openStatus,
                                 onCheckedChange = { onToggleShopOpen(primaryShop.id, it) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = ClickitMidnight, checkedTrackColor = ClickitPeach),
+                                colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = ClickitBrandTeal),
                                 modifier = Modifier.testTag("worker_shop_open_switch")
                             )
                         }
@@ -164,14 +162,14 @@ fun WorkerDashboardScreen(
                         val capRatio = (activeJobs.size.toFloat() / primaryShop.dailyCapacity.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Today's Workload Capacity", style = MaterialTheme.typography.labelSmall, color = ClickitMutedText)
-                                Text("${activeJobs.size} / ${primaryShop.dailyCapacity} jobs", style = MaterialTheme.typography.labelSmall, color = ClickitIvory)
+                                Text("Daily Capacity", style = MaterialTheme.typography.labelSmall, color = ClickitTextSecondary)
+                                Text("${activeJobs.size} / ${primaryShop.dailyCapacity} jobs", style = MaterialTheme.typography.labelSmall, color = ClickitTextPrimary)
                             }
                             LinearProgressIndicator(
                                 progress = { capRatio },
-                                color = ClickitPeach,
-                                trackColor = ClickitSlate,
-                                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(50))
+                                color = ClickitBrandTeal,
+                                trackColor = ClickitBorder,
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(50))
                             )
                         }
                     }
@@ -180,17 +178,17 @@ fun WorkerDashboardScreen(
         }
 
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 WorkerMetricCard(
-                    title = "New Requests",
+                    title = "Requests",
                     value = pendingRequests.size.toString(),
                     accent = ClickitWarning,
                     modifier = Modifier.weight(1f).clickable(onClick = onOpenJobsTab)
                 )
                 WorkerMetricCard(
-                    title = "Active Jobs",
+                    title = "Active",
                     value = activeJobs.size.toString(),
-                    accent = ClickitInfo,
+                    accent = ClickitBrandTeal,
                     modifier = Modifier.weight(1f).clickable(onClick = onOpenJobsTab)
                 )
                 WorkerMetricCard(
@@ -208,9 +206,9 @@ fun WorkerDashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Pending Requests", style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
+                Text("Requests", style = MaterialTheme.typography.titleLarge, color = ClickitTextPrimary)
                 TextButton(onClick = onOpenJobsTab) {
-                    Text("All Jobs", color = ClickitPeach)
+                    Text("View All", color = ClickitBrandTeal)
                 }
             }
         }
@@ -219,8 +217,8 @@ fun WorkerDashboardScreen(
             item {
                 EmptyStateCard(
                     icon = Icons.Filled.CheckCircle,
-                    title = "No pending requests",
-                    subtitle = "New orders appear here.",
+                    title = "No requests",
+                    subtitle = "Orders appear here.",
                     actionLabel = "My Shop",
                     onAction = onOpenDukaanTab
                 )
@@ -228,17 +226,19 @@ fun WorkerDashboardScreen(
         } else {
             items(pendingRequests.take(5), key = { it.id }) { bk ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitWarning),
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ClickitWarning.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth().clickable(onClick = onOpenJobsTab)
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("${bk.shopName} • ${bk.parcelCode}", style = MaterialTheme.typography.titleSmall, color = ClickitPeach)
-                            Text(formatInr(bk.serviceSubtotalMinor), style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                            Text("${bk.shopName} • ${bk.parcelCode}", style = MaterialTheme.typography.titleSmall, color = ClickitBrandTeal)
+                            Text(formatInr(bk.serviceSubtotalMinor), style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                         }
-                        Text("${bk.customerName}: ${bk.itemsSummary}", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
-                        Text("Slot: ${bk.slotWindowLabel}", style = MaterialTheme.typography.labelSmall, color = ClickitInfo)
+                        Text("${bk.customerName}: ${bk.itemsSummary}", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
+                        Text("Slot: ${bk.slotWindowLabel}", style = MaterialTheme.typography.labelSmall, color = ClickitBrandTeal)
                     }
                 }
             }
@@ -250,17 +250,18 @@ fun WorkerDashboardScreen(
 private fun WorkerMetricCard(
     title: String,
     value: String,
-    accent: androidx.compose.ui.graphics.Color,
+    accent: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSubtleLine),
-        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
+        shape = RoundedCornerShape(10.dp),
         modifier = modifier
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(title, style = MaterialTheme.typography.labelSmall, color = ClickitMutedText)
+            Text(title, style = MaterialTheme.typography.labelSmall, color = ClickitTextSecondary)
             Text(value, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold), color = accent)
         }
     }
@@ -290,20 +291,22 @@ fun WorkerJobsScreen(
         var reason by remember { mutableStateOf("Actual item count / fabric delicacy adjustment") }
         AlertDialog(
             onDismissRequest = { quoteTarget = null },
-            containerColor = ClickitSlateDeep,
-            title = { Text("Revise Quote (${bk.parcelCode})", color = ClickitIvory) },
+            containerColor = ClickitLightSurface,
+            title = { Text("Update Quote (${bk.parcelCode})", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
                         value = amountRupees,
                         onValueChange = { amountRupees = it },
-                        label = { Text("New Subtotal (₹) *") },
-                        singleLine = true
+                        label = { Text("Amount (₹) *") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
                     )
                     OutlinedTextField(
                         value = reason,
                         onValueChange = { reason = it },
-                        label = { Text("Reason *") }
+                        label = { Text("Reason *") },
+                        shape = RoundedCornerShape(10.dp)
                     )
                 }
             },
@@ -316,20 +319,21 @@ fun WorkerJobsScreen(
                             quoteTarget = null
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight)
-                ) { Text("Send Quote") }
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
+                ) { Text("Send") }
             },
             dismissButton = {
-                TextButton(onClick = { quoteTarget = null }) { Text("Cancel", color = ClickitIvory) }
+                TextButton(onClick = { quoteTarget = null }) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
 
     if (rejectTarget != null) {
         DestructiveConfirmDialog(
-            title = "Decline Booking ${rejectTarget!!.parcelCode}?",
-            message = "Customer will be notified immediately that your shop cannot fulfill this slot.",
-            confirmLabel = "Decline Request",
+            title = "Decline ${rejectTarget!!.parcelCode}?",
+            message = "Customer will be notified.",
+            confirmLabel = "Decline",
             onConfirm = {
                 onReject(rejectTarget!!, "Shop capacity full for requested window")
                 rejectTarget = null
@@ -347,17 +351,25 @@ fun WorkerJobsScreen(
                 FilterChip(
                     selected = selectedTab == idx,
                     onClick = { selectedTab = idx },
+                    shape = RoundedCornerShape(8.dp),
                     label = { Text(label) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = ClickitPeach,
-                        selectedLabelColor = ClickitMidnight
+                        selectedContainerColor = ClickitBrandTeal,
+                        selectedLabelColor = Color.White,
+                        containerColor = ClickitLightSurface,
+                        labelColor = ClickitTextPrimary
+                    ),
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = selectedTab == idx,
+                        borderColor = ClickitBorder
                     )
                 )
             }
         }
 
         when (workerBookingsState) {
-            is UiState.Loading -> LoadingStateView("Loading worker jobs...")
+            is UiState.Loading -> LoadingStateView("Loading...")
             is UiState.Error -> Box(Modifier.padding(16.dp)) { ErrorRetryCard(workerBookingsState.message, onRetry = onRetry) }
             is UiState.Success -> {
                 val filtered = workerBookingsState.data.filter { bk ->
@@ -380,8 +392,8 @@ fun WorkerJobsScreen(
                     Box(Modifier.padding(16.dp)) {
                         EmptyStateCard(
                             icon = Icons.Filled.Inventory,
-                            title = "No jobs in ${tabs[selectedTab]}",
-                            subtitle = "New orders appear here."
+                            title = "No jobs",
+                            subtitle = "Orders appear here."
                         )
                     }
                 } else {
@@ -429,12 +441,13 @@ private fun WorkerJobCard(
     val qcItems = listOf("QR Tagged", "Condition Logged", "Stains Noted", "Tamper-Sealed")
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSubtleLine),
-        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth().testTag("worker_job_${booking.id}")
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -442,9 +455,9 @@ private fun WorkerJobCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     CategoryBadge(booking.category)
-                    Text(booking.parcelCode, style = MaterialTheme.typography.titleSmall, color = ClickitPeach)
+                    Text(booking.parcelCode, style = MaterialTheme.typography.titleSmall, color = ClickitBrandTeal)
                     if (isUrgent) {
-                        Surface(color = ClickitWarningContainer, shape = RoundedCornerShape(8.dp)) {
+                        Surface(color = ClickitWarningContainer, shape = RoundedCornerShape(6.dp)) {
                             Text(
                                 text = "URGENT +25%",
                                 style = MaterialTheme.typography.labelSmall,
@@ -454,7 +467,7 @@ private fun WorkerJobCard(
                         }
                     }
                     if (isFreeBulk) {
-                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(6.dp)) {
                             Text(
                                 text = "FREE >5 KG",
                                 style = MaterialTheme.typography.labelSmall,
@@ -467,12 +480,12 @@ private fun WorkerJobCard(
                 BookingStatusBadge(booking.status)
             }
 
-            Text("${booking.customerName} • ${booking.shopName}", style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
-            Text(booking.itemsSummary, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+            Text("${booking.customerName} • ${booking.shopName}", style = MaterialTheme.typography.titleMedium, color = ClickitTextPrimary)
+            Text(booking.itemsSummary, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
             Text(
-                text = "${booking.itemCount} pcs • ${booking.weightKg} kg • Worker Share: ${formatInr(booking.serviceSubtotalMinor)} • ${booking.slotWindowLabel}",
+                text = "${booking.itemCount} pcs • ${booking.weightKg} kg • ${formatInr(booking.serviceSubtotalMinor)} • ${booking.slotWindowLabel}",
                 style = MaterialTheme.typography.labelMedium,
-                color = ClickitPeachSoft
+                color = ClickitBrandTealDark
             )
 
             when (st) {
@@ -481,24 +494,27 @@ private fun WorkerJobCard(
                         Button(
                             onClick = onAccept,
                             enabled = !isBusy,
-                            colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White),
                             modifier = Modifier.weight(1f).testTag("worker_accept_${booking.id}")
                         ) { Text("Accept") }
                         OutlinedButton(
                             onClick = onReviseQuote,
                             enabled = !isBusy,
-                            border = BorderStroke(1.dp, ClickitPeach),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, ClickitBorderStrong),
                             modifier = Modifier.weight(1f)
-                        ) { Text("Revise Quote", color = ClickitPeach) }
+                        ) { Text("Quote", color = ClickitBrandTeal) }
                         OutlinedButton(
                             onClick = onReject,
                             enabled = !isBusy,
-                            border = BorderStroke(1.dp, ClickitCrimson)
-                        ) { Text("Decline", color = ClickitPeachSoft) }
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, ClickitCrimson.copy(alpha = 0.55f))
+                        ) { Text("Decline", color = ClickitCrimson) }
                     }
                 }
                 BookingStatus.CONFIRMED, BookingStatus.PICKUP_SCHEDULED, BookingStatus.PICKED_UP -> {
-                    Text("Intake & QC Check", style = MaterialTheme.typography.labelSmall, color = ClickitMutedText)
+                    Text("Intake Check", style = MaterialTheme.typography.labelSmall, color = ClickitTextSecondary)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         qcItems.forEach { qc ->
                             val selected = qc in checkedQcTags
@@ -507,17 +523,18 @@ private fun WorkerJobCard(
                                 onClick = {
                                     checkedQcTags = if (selected) checkedQcTags - qc else checkedQcTags + qc
                                 },
+                                shape = RoundedCornerShape(8.dp),
                                 label = { Text(qc, style = MaterialTheme.typography.labelSmall) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = ClickitSuccessContainer,
                                     selectedLabelColor = ClickitSuccess,
-                                    containerColor = ClickitMidnight,
-                                    labelColor = ClickitMutedText
+                                    containerColor = ClickitLightSurface,
+                                    labelColor = ClickitTextSecondary
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = selected,
-                                    borderColor = ClickitSubtleLine
+                                    borderColor = ClickitBorder
                                 )
                             )
                         }
@@ -525,10 +542,11 @@ private fun WorkerJobCard(
                     Button(
                         onClick = onReceiveItems,
                         enabled = !isBusy,
-                        colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight),
-                        modifier = Modifier.fillMaxWidth().testTag("worker_receive_${booking.id}")
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White),
+                        modifier = Modifier.fillMaxWidth().height(48.dp).testTag("worker_receive_${booking.id}")
                     ) {
-                        Text("Confirm Item Receipt (${booking.itemCount} pcs)")
+                        Text("Confirm Receipt (${booking.itemCount})")
                     }
                 }
                 BookingStatus.RECEIVED_BY_WORKER, BookingStatus.IN_PROGRESS -> {
@@ -543,6 +561,7 @@ private fun WorkerJobCard(
                             FilterChip(
                                 selected = booking.milestone == step,
                                 onClick = { onUpdateMilestone(step) },
+                                shape = RoundedCornerShape(8.dp),
                                 label = {
                                     Text(
                                         text = if (isDelayFlag) "Flag Delay" else step,
@@ -550,20 +569,20 @@ private fun WorkerJobCard(
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = if (isDelayFlag) ClickitWarningContainer else ClickitInfoContainer,
-                                    selectedLabelColor = if (isDelayFlag) ClickitWarning else ClickitInfo,
-                                    containerColor = ClickitMidnight,
-                                    labelColor = if (isDelayFlag) ClickitWarning else ClickitMutedText
+                                    selectedContainerColor = if (isDelayFlag) ClickitWarningContainer else ClickitBrandTealTint,
+                                    selectedLabelColor = if (isDelayFlag) ClickitWarning else ClickitBrandTeal,
+                                    containerColor = ClickitLightSurface,
+                                    labelColor = if (isDelayFlag) ClickitWarning else ClickitTextSecondary
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = booking.milestone == step,
-                                    borderColor = if (isDelayFlag) ClickitWarning.copy(alpha = 0.45f) else ClickitSubtleLine
+                                    borderColor = if (isDelayFlag) ClickitWarning.copy(alpha = 0.45f) else ClickitBorder
                                 )
                             )
                         }
                     }
-                    Text("Pre-Seal QC Checklist", style = MaterialTheme.typography.labelSmall, color = ClickitMutedText)
+                    Text("Quality Check", style = MaterialTheme.typography.labelSmall, color = ClickitTextSecondary)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         qcItems.forEach { qc ->
                             val selected = qc in checkedQcTags
@@ -572,17 +591,18 @@ private fun WorkerJobCard(
                                 onClick = {
                                     checkedQcTags = if (selected) checkedQcTags - qc else checkedQcTags + qc
                                 },
+                                shape = RoundedCornerShape(8.dp),
                                 label = { Text(qc, style = MaterialTheme.typography.labelSmall) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = ClickitSuccessContainer,
                                     selectedLabelColor = ClickitSuccess,
-                                    containerColor = ClickitMidnight,
-                                    labelColor = ClickitMutedText
+                                    containerColor = ClickitLightSurface,
+                                    labelColor = ClickitTextSecondary
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = selected,
-                                    borderColor = ClickitSubtleLine
+                                    borderColor = ClickitBorder
                                 )
                             )
                         }
@@ -590,14 +610,15 @@ private fun WorkerJobCard(
                     Button(
                         onClick = onMarkReady,
                         enabled = !isBusy,
-                        colors = ButtonDefaults.buttonColors(containerColor = ClickitSuccess, contentColor = ClickitMidnight),
-                        modifier = Modifier.fillMaxWidth().testTag("worker_ready_${booking.id}")
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = ClickitSuccess, contentColor = Color.White),
+                        modifier = Modifier.fillMaxWidth().height(48.dp).testTag("worker_ready_${booking.id}")
                     ) {
-                        Text("Mark Work Ready & Seal Parcel")
+                        Text("Mark Ready")
                     }
                 }
                 else -> {
-                    Text("Milestone: ${booking.milestone}", style = MaterialTheme.typography.bodySmall, color = ClickitInfo)
+                    Text("Milestone: ${booking.milestone}", style = MaterialTheme.typography.bodySmall, color = ClickitBrandTeal)
                 }
             }
         }
@@ -632,34 +653,43 @@ fun WorkerDukaanScreen(
         var startPrice by remember(baseShop.id) { mutableStateOf((baseShop.startingPriceMinor / 100L).coerceAtLeast(1L).toString()) }
         AlertDialog(
             onDismissRequest = { showShopEditor = false },
-            containerColor = ClickitSlateDeep,
-            title = { Text(if (primaryShop == null) "Create Shop" else "Edit Shop", color = ClickitIvory) },
+            containerColor = ClickitLightSurface,
+            title = { Text(if (primaryShop == null) "Create Shop" else "Edit Shop", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Shop Name *") }, singleLine = true)
+                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Shop Name *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         ServiceCategory.entries.forEach { cat ->
                             FilterChip(
                                 selected = category == cat,
                                 onClick = { category = cat },
+                                shape = RoundedCornerShape(8.dp),
                                 label = { Text(cat.label, style = MaterialTheme.typography.labelSmall) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = ClickitPeach,
-                                    selectedLabelColor = ClickitMidnight
+                                    selectedContainerColor = ClickitBrandTeal,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = ClickitLightSurface,
+                                    labelColor = ClickitTextPrimary
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = category == cat,
+                                    borderColor = ClickitBorder
                                 )
                             )
                         }
                     }
-                    OutlinedTextField(value = locality, onValueChange = { locality = it }, label = { Text("Area / Locality *") }, singleLine = true)
-                    OutlinedTextField(value = addressSummary, onValueChange = { addressSummary = it }, label = { Text("Shop Address *") })
-                    OutlinedTextField(value = tagline, onValueChange = { tagline = it }, label = { Text("Tagline") }, singleLine = true)
-                    OutlinedTextField(value = hours, onValueChange = { hours = it }, label = { Text("Hours") }, singleLine = true)
+                    OutlinedTextField(value = locality, onValueChange = { locality = it }, label = { Text("Area *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = addressSummary, onValueChange = { addressSummary = it }, label = { Text("Address *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = tagline, onValueChange = { tagline = it }, label = { Text("Tagline") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = hours, onValueChange = { hours = it }, label = { Text("Hours") }, singleLine = true, shape = RoundedCornerShape(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(
                             value = startPrice,
                             onValueChange = { startPrice = it },
                             label = { Text("Min ₹ *") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         )
                         OutlinedTextField(
@@ -667,6 +697,7 @@ fun WorkerDukaanScreen(
                             onValueChange = { capacity = it },
                             label = { Text("Capacity *") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -689,11 +720,12 @@ fun WorkerDukaanScreen(
                             )
                         ) { showShopEditor = false }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight)
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
                 ) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = { showShopEditor = false }) { Text("Cancel", color = ClickitIvory) }
+                TextButton(onClick = { showShopEditor = false }) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
@@ -718,15 +750,15 @@ fun WorkerDukaanScreen(
                 showAddService = false
                 editingService = null
             },
-            containerColor = ClickitSlateDeep,
-            title = { Text(if (editingService == null) "Add Service" else "Edit Price & Service", color = ClickitIvory) },
+            containerColor = ClickitLightSurface,
+            title = { Text(if (editingService == null) "Add Service" else "Edit Service", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Service Name *") })
-                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Inclusions / Description") })
-                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Pricing Unit (cloth/kg/pair) *") })
-                    OutlinedTextField(value = priceRupees, onValueChange = { priceRupees = it }, label = { Text("Price (₹) *") })
-                    OutlinedTextField(value = turnaround, onValueChange = { turnaround = it }, label = { Text("Turnaround (hours) *") })
+                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text("Unit (cloth/kg/pair) *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = priceRupees, onValueChange = { priceRupees = it }, label = { Text("Price (₹) *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = turnaround, onValueChange = { turnaround = it }, label = { Text("Hours *") }, shape = RoundedCornerShape(10.dp))
                 }
             },
             confirmButton = {
@@ -747,14 +779,15 @@ fun WorkerDukaanScreen(
                             editingService = null
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight)
-                ) { Text("Save Service") }
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
+                ) { Text("Save") }
             },
             dismissButton = {
                 TextButton(onClick = {
                     showAddService = false
                     editingService = null
-                }) { Text("Cancel", color = ClickitIvory) }
+                }) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
@@ -769,7 +802,7 @@ fun WorkerDukaanScreen(
                 EmptyStateCard(
                     icon = Icons.Filled.Storefront,
                     title = "No shop yet",
-                    subtitle = "Create your shop to start receiving orders.",
+                    subtitle = "Add your shop to start receiving orders.",
                     actionLabel = "Create Shop",
                     onAction = { showShopEditor = true }
                 )
@@ -777,10 +810,12 @@ fun WorkerDukaanScreen(
         } else {
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitSlate)
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, ClickitBorder)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -788,12 +823,12 @@ fun WorkerDukaanScreen(
                         ) {
                             CategoryBadge(primaryShop.category)
                             IconButton(onClick = { showShopEditor = true }) {
-                                Icon(Icons.Filled.Edit, contentDescription = "Edit shop", tint = ClickitPeach)
+                                Icon(Icons.Filled.Edit, contentDescription = "Edit shop", tint = ClickitBrandTeal)
                             }
                         }
-                        Text(primaryShop.shopName, style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
-                        Text(primaryShop.tagline, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
-                        Text("Hours: ${primaryShop.hoursSummary} • Capacity: ${primaryShop.dailyCapacity}/day", style = MaterialTheme.typography.labelSmall, color = ClickitPeachSoft)
+                        Text(primaryShop.shopName, style = MaterialTheme.typography.titleLarge, color = ClickitTextPrimary)
+                        Text(primaryShop.tagline, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
+                        Text("Hours: ${primaryShop.hoursSummary} • Capacity: ${primaryShop.dailyCapacity}/day", style = MaterialTheme.typography.labelSmall, color = ClickitBrandTeal)
                     }
                 }
             }
@@ -804,36 +839,38 @@ fun WorkerDukaanScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Service Catalogue (${services.size})", style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
+                    Text("Services (${services.size})", style = MaterialTheme.typography.titleMedium, color = ClickitTextPrimary)
                     TextButton(onClick = { showAddService = true }, modifier = Modifier.testTag("add_service_button")) {
-                        Icon(Icons.Filled.Add, contentDescription = null, tint = ClickitPeach)
+                        Icon(Icons.Filled.Add, contentDescription = null, tint = ClickitBrandTeal)
                         Spacer(Modifier.width(4.dp))
-                        Text("Add Service", color = ClickitPeach)
+                        Text("Add", color = ClickitBrandTeal)
                     }
                 }
             }
 
             items(services, key = { it.id }) { svc ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitSlate)
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ClickitBorder)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(svc.name, style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                            Text("${formatInr(svc.priceMinor)}/${svc.unit} • ${svc.turnaroundHours}h", style = MaterialTheme.typography.labelMedium, color = ClickitPeach)
-                            Text(svc.description, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                            Text(svc.name, style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                            Text("${formatInr(svc.priceMinor)}/${svc.unit} • ${svc.turnaroundHours}h", style = MaterialTheme.typography.labelMedium, color = ClickitBrandTeal)
+                            Text(svc.description, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                         }
                         IconButton(onClick = { editingService = svc }) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Edit price", tint = ClickitIvory)
+                            Icon(Icons.Filled.Edit, contentDescription = "Edit price", tint = ClickitTextPrimary)
                         }
                         Switch(
                             checked = svc.active,
                             onCheckedChange = { onToggleServiceActive(primaryShop.id, svc.id, it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = ClickitMidnight, checkedTrackColor = ClickitPeach)
+                            colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = ClickitBrandTeal)
                         )
                     }
                 }
@@ -857,27 +894,28 @@ fun WorkerEarningsScreen(workerBookingsState: UiState<List<Booking>>) {
     ) {
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = ClickitBurgundy.copy(alpha = 0.7f)),
-                border = BorderStroke(1.dp, ClickitPeach)
+                colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, ClickitBorder)
             ) {
-                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NeonIconBadge(
                             icon = Icons.Filled.AccountBalanceWallet,
-                            tint = ClickitPeach,
-                            glowColor = ClickitPeach,
+                            tint = ClickitBrandTeal,
                             size = 38.dp,
                             iconSize = 19.dp,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(10.dp)
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text("Settled Worker Earnings", style = MaterialTheme.typography.titleSmall, color = ClickitPeachSoft)
+                        Text("Earnings", style = MaterialTheme.typography.titleSmall, color = ClickitTextSecondary)
                     }
-                    Text(formatInr(totalWorkerNet), style = MaterialTheme.typography.displaySmall, color = ClickitIvory)
+                    Text(formatInr(totalWorkerNet), style = MaterialTheme.typography.displaySmall, color = ClickitBrandTeal)
                     Text(
-                        text = "Gross Customer Billing: ${formatInr(totalGross)} • Platform Fees: ${formatInr(totalPlatform)}",
+                        text = "Gross: ${formatInr(totalGross)} • Fees: ${formatInr(totalPlatform)}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = ClickitMutedText
+                        color = ClickitTextSecondary
                     )
                 }
             }
@@ -887,27 +925,29 @@ fun WorkerEarningsScreen(workerBookingsState: UiState<List<Booking>>) {
             item {
                 EmptyStateCard(
                     icon = Icons.Filled.AccountBalanceWallet,
-                    title = "No settled jobs yet",
-                    subtitle = "Job-wise immutable INR financial breakdowns appear once bookings complete."
+                    title = "No earnings yet",
+                    subtitle = "Completed jobs appear here."
                 )
             }
         } else {
             items(completed, key = { it.id }) { bk ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitSlate)
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ClickitBorder)
                 ) {
                     Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("${bk.parcelCode} • ${bk.customerName}", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                            Text("${bk.parcelCode} • ${bk.customerName}", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                             Text("+${formatInr(bk.serviceSubtotalMinor)}", style = MaterialTheme.typography.titleSmall, color = ClickitSuccess)
                         }
-                        Text(bk.itemsSummary, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
-                        HorizontalDivider(color = ClickitSubtleLine, modifier = Modifier.padding(vertical = 4.dp))
+                        Text(bk.itemsSummary, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
+                        HorizontalDivider(color = ClickitBorder, modifier = Modifier.padding(vertical = 4.dp))
                         Text(
-                            text = "Customer Paid: ${formatInr(bk.totalMinor)} (Delivery ${formatInr(bk.deliveryFeeMinor)} • Clickit ${formatInr(bk.platformFeeMinor)})",
+                            text = "Paid: ${formatInr(bk.totalMinor)} (Delivery ${formatInr(bk.deliveryFeeMinor)} • Fee ${formatInr(bk.platformFeeMinor)})",
                             style = MaterialTheme.typography.labelSmall,
-                            color = ClickitMutedText
+                            color = ClickitTextSecondary
                         )
                     }
                 }

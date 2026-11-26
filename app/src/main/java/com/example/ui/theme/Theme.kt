@@ -9,67 +9,66 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
-private val ClickitDarkColorScheme = darkColorScheme(
-    primary = ClickitPeach,
-    onPrimary = ClickitMidnight,
-    primaryContainer = ClickitBurgundy,
-    onPrimaryContainer = ClickitPeachSoft,
-    secondary = ClickitSlate,
-    onSecondary = ClickitIvory,
-    secondaryContainer = ClickitSlateDeep,
-    onSecondaryContainer = ClickitIvory,
-    tertiary = ClickitInfo,
-    onTertiary = ClickitMidnight,
+private val ClickitLightColorScheme = lightColorScheme(
+    primary = ClickitBrandPrimary,
+    onPrimary = Color.White,
+    primaryContainer = ClickitBrandTint,
+    onPrimaryContainer = ClickitBrandDark,
+    secondary = ClickitTextPrimary,
+    onSecondary = Color.White,
+    secondaryContainer = ClickitLightSurfaceVar,
+    onSecondaryContainer = ClickitTextPrimary,
+    tertiary = ClickitBrandDark,
+    onTertiary = Color.White,
     tertiaryContainer = ClickitInfoContainer,
-    onTertiaryContainer = ClickitInfo,
-    background = ClickitMidnight,
-    onBackground = ClickitIvory,
-    surface = ClickitSlateDeep,
-    onSurface = ClickitIvory,
-    surfaceVariant = ClickitSlate,
-    onSurfaceVariant = ClickitMutedText,
-    outline = ClickitSubtleLine,
-    outlineVariant = ClickitSlate,
+    onTertiaryContainer = ClickitBrandDark,
+    background = ClickitLightBg,
+    onBackground = ClickitTextPrimary,
+    surface = ClickitLightSurface,
+    onSurface = ClickitTextPrimary,
+    surfaceVariant = ClickitLightSurfaceVar,
+    onSurfaceVariant = ClickitTextSecondary,
+    outline = ClickitBorder,
+    outlineVariant = ClickitBorderStrong,
     error = ClickitCrimson,
     onError = Color.White,
-    errorContainer = ClickitBurgundy,
-    onErrorContainer = ClickitPeachSoft
+    errorContainer = ClickitDangerContainer,
+    onErrorContainer = Color(0xFF991B1B)
 )
 
-private val ClickitLightColorScheme = lightColorScheme(
-    primary = ClickitMidnight,
-    onPrimary = ClickitIvory,
-    primaryContainer = ClickitPeachSoft,
-    onPrimaryContainer = ClickitMidnight,
-    secondary = ClickitSlateDeep,
-    onSecondary = ClickitIvory,
-    secondaryContainer = ClickitLightSurfaceVar,
-    onSecondaryContainer = ClickitMidnight,
-    tertiary = ClickitBurgundy,
-    onTertiary = Color.White,
-    background = ClickitLightBg,
-    onBackground = ClickitMidnight,
-    surface = ClickitLightSurface,
-    onSurface = ClickitMidnight,
-    surfaceVariant = ClickitLightSurfaceVar,
-    onSurfaceVariant = ClickitSlate,
-    outline = Color(0xFFCBD2E0),
-    error = ClickitCrimson,
+private val ClickitDarkColorScheme = darkColorScheme(
+    primary = Color(0xFF60A5FA),
+    onPrimary = Color(0xFF0F172A),
+    primaryContainer = Color(0xFF1E3A8A),
+    onPrimaryContainer = Color(0xFFDBEAFE),
+    secondary = Color(0xFF334155),
+    onSecondary = Color(0xFFF8FAFC),
+    secondaryContainer = Color(0xFF1E293B),
+    onSecondaryContainer = Color(0xFFF8FAFC),
+    background = Color(0xFF0F172A),
+    onBackground = Color(0xFFF8FAFC),
+    surface = Color(0xFF1E293B),
+    onSurface = Color(0xFFF8FAFC),
+    surfaceVariant = Color(0xFF334155),
+    onSurfaceVariant = Color(0xFF94A3B8),
+    outline = Color(0xFF334155),
+    error = Color(0xFFEF4444),
     onError = Color.White,
-    errorContainer = Color(0xFFFDE8EB),
-    onErrorContainer = ClickitBurgundy
+    errorContainer = Color(0xFF7F1D1D),
+    onErrorContainer = Color(0xFFFEE2E2)
 )
 
 val ClickitShapes = Shapes(
-    small = RoundedCornerShape(10.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(22.dp),
-    extraLarge = RoundedCornerShape(28.dp)
+    extraSmall = RoundedCornerShape(6.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(10.dp),
+    large = RoundedCornerShape(12.dp),
+    extraLarge = RoundedCornerShape(16.dp)
 )
 
 @Composable
 fun ClickitTheme(
-    darkTheme: Boolean = true,
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) ClickitDarkColorScheme else ClickitLightColorScheme

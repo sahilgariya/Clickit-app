@@ -1,14 +1,8 @@
 package com.example.ui.screens
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,13 +19,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -58,13 +50,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.data.Booking
@@ -80,20 +69,18 @@ import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.SmartBatchLiveMap
 import com.example.ui.components.SmartBatchVisualTracker
-import com.example.ui.theme.ClickitBurgundy
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBorderStrong
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
 import com.example.ui.theme.ClickitCrimson
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitInfoContainer
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitDangerContainer
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
 import com.example.ui.theme.ClickitSuccess
 import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 import com.example.ui.theme.ClickitWarning
 import com.example.ui.theme.ClickitWarningContainer
 
@@ -130,7 +117,7 @@ fun ActiveOrdersScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ClickitMidnight),
+            .background(ClickitLightBg),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Column(
@@ -138,74 +125,70 @@ fun ActiveOrdersScreen(
                 .fillMaxSize()
                 .widthIn(max = 720.dp)
         ) {
-            // Top bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    IconButton(
-                        onClick = onBack,
+            Surface(color = ClickitLightSurface, modifier = Modifier.fillMaxWidth()) {
+                Column {
+                    Row(
                         modifier = Modifier
-                            .minimumInteractiveComponentSize()
-                            .testTag("active_orders_back_button")
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = ClickitIvory
-                        )
-                    }
-                    Spacer(Modifier.width(4.dp))
-                    Column {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.weight(1f)
                         ) {
-                            Text(
-                                text = "Active Orders",
-                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = ClickitIvory
-                            )
-                            LiveStatusBadge()
+                            IconButton(
+                                onClick = onBack,
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .testTag("active_orders_back_button")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = ClickitTextPrimary
+                                )
+                            }
+                            Spacer(Modifier.width(4.dp))
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Active Orders",
+                                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                        color = ClickitTextPrimary
+                                    )
+                                    LiveStatusBadge()
+                                }
+                            }
                         }
-                        Text(
-                            text = "Real-time order milestones synced from Firestore",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = ClickitMutedText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
 
-                if (activeOrdersState is UiState.Success) {
-                    Surface(
-                        color = ClickitSlateDeep,
-                        shape = RoundedCornerShape(50),
-                        border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.5f)),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text(
-                            text = "${activeOrdersState.data.size} live",
-                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = ClickitPeach,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        )
+                        if (activeOrdersState is UiState.Success) {
+                            Surface(
+                                color = ClickitBrandTealTint,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.padding(end = 8.dp)
+                            ) {
+                                Text(
+                                    text = "${activeOrdersState.data.size} live",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                    color = ClickitBrandTeal,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                )
+                            }
+                        }
                     }
+                    HorizontalDivider(color = ClickitBorder)
                 }
             }
 
             when (activeOrdersState) {
                 is UiState.Loading -> {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        LoadingStateView("Syncing active order statuses...")
+                        LoadingStateView("Loading...")
                     }
                 }
                 is UiState.Error -> {
@@ -222,25 +205,25 @@ fun ActiveOrdersScreen(
 
                     OutlinedButton(
                         onClick = { onSimulatePickupAlert(targetForSimulation) },
-                        border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.65f)),
-                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, ClickitBorderStrong),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                             .height(48.dp)
                             .testTag("simulate_smart_batch_alert_button")
                     ) {
                         Icon(
                             imageVector = Icons.Filled.NotificationsActive,
                             contentDescription = null,
-                            tint = ClickitPeach,
+                            tint = ClickitBrandTeal,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = "Simulate Smart Batch Pickup Alert",
+                            text = "Test Alert",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                            color = ClickitPeach
+                            color = ClickitBrandTeal
                         )
                     }
 
@@ -248,9 +231,9 @@ fun ActiveOrdersScreen(
                         Box(Modifier.padding(16.dp)) {
                             EmptyStateCard(
                                 icon = Icons.Filled.LocalShipping,
-                                title = "No active orders right now",
-                                subtitle = "Book a nearby service from Explore to track pickup, progress, and delivery live.",
-                                actionLabel = "Explore Services",
+                                title = "No active orders",
+                                subtitle = "Browse shops to place an order.",
+                                actionLabel = "Explore",
                                 onAction = onExploreClick
                             )
                         }
@@ -271,7 +254,6 @@ fun ActiveOrdersScreen(
                             )
                         }
 
-                        // Summary strip
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -281,19 +263,19 @@ fun ActiveOrdersScreen(
                             OrderStatusSummaryChip(
                                 label = "Needs Action",
                                 count = attentionCount,
-                                accent = if (attentionCount > 0) ClickitWarning else ClickitMutedText,
+                                accent = if (attentionCount > 0) ClickitWarning else ClickitTextSecondary,
                                 modifier = Modifier.weight(1f)
                             )
                             OrderStatusSummaryChip(
                                 label = "In Service",
                                 count = inServiceCount,
-                                accent = ClickitPeach,
+                                accent = ClickitBrandTeal,
                                 modifier = Modifier.weight(1f)
                             )
                             OrderStatusSummaryChip(
                                 label = "In Transit",
                                 count = transitCount,
-                                accent = ClickitInfo,
+                                accent = ClickitBrandTeal,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -308,10 +290,18 @@ fun ActiveOrdersScreen(
                                 FilterChip(
                                     selected = selectedFilter == index,
                                     onClick = { selectedFilter = index },
+                                    shape = RoundedCornerShape(8.dp),
                                     label = { Text(filter.label) },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = ClickitPeach,
-                                        selectedLabelColor = ClickitMidnight
+                                        selectedContainerColor = ClickitBrandTeal,
+                                        selectedLabelColor = Color.White,
+                                        containerColor = ClickitLightSurface,
+                                        labelColor = ClickitTextPrimary
+                                    ),
+                                    border = FilterChipDefaults.filterChipBorder(
+                                        enabled = true,
+                                        selected = selectedFilter == index,
+                                        borderColor = ClickitBorder
                                     ),
                                     modifier = Modifier.testTag("active_filter_${filter.name.lowercase()}")
                                 )
@@ -338,9 +328,9 @@ fun ActiveOrdersScreen(
                             Box(Modifier.padding(16.dp)) {
                                 EmptyStateCard(
                                     icon = Icons.Filled.Schedule,
-                                    title = "No orders in ${filters[selectedFilter].label}",
-                                    subtitle = "Switch back to All Active to see your ongoing bookings.",
-                                    actionLabel = "Show All Active",
+                                    title = "No orders",
+                                    subtitle = "None in ${filters[selectedFilter].label}.",
+                                    actionLabel = "Show All",
                                     onAction = { selectedFilter = 0 }
                                 )
                             }
@@ -369,7 +359,8 @@ fun ActiveOrdersScreen(
                                     }
                                 }
 
-                                items(filtered, key = { it.id }) { booking ->
+                                items(filtered.size, key = { filtered[it].id }) { idx ->
+                                    val booking = filtered[idx]
                                     ActiveOrderStatusTrackerCard(
                                         booking = booking,
                                         onClick = { onOrderClick(booking) }
@@ -395,9 +386,10 @@ fun ActiveOrdersHomeSection(
     when (activeOrdersState) {
         is UiState.Loading -> {
             Card(
-                colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                border = BorderStroke(1.dp, ClickitSlate),
-                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                border = BorderStroke(1.dp, ClickitBorder),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -406,14 +398,14 @@ fun ActiveOrdersHomeSection(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     CircularProgressIndicator(
-                        color = ClickitPeach,
+                        color = ClickitBrandTeal,
                         strokeWidth = 2.dp,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = "Checking active orders...",
+                        text = "Loading...",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = ClickitMutedText
+                        color = ClickitTextSecondary
                     )
                 }
             }
@@ -440,7 +432,7 @@ fun ActiveOrdersHomeSection(
                             Text(
                                 text = "Active Orders (${activeOrders.size})",
                                 style = MaterialTheme.typography.titleLarge,
-                                color = ClickitIvory
+                                color = ClickitTextPrimary
                             )
                             LiveStatusBadge()
                         }
@@ -450,12 +442,12 @@ fun ActiveOrdersHomeSection(
                                 .minimumInteractiveComponentSize()
                                 .testTag("open_active_orders_screen_button")
                         ) {
-                            Text("Live Tracker", color = ClickitPeach)
+                            Text("Live Map", color = ClickitBrandTeal)
                             Spacer(Modifier.width(4.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
-                                tint = ClickitPeach,
+                                tint = ClickitBrandTeal,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -469,16 +461,16 @@ fun ActiveOrdersHomeSection(
                     if (activeOrders.size > 1) {
                         OutlinedButton(
                             onClick = onViewAllClick,
-                            border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.6f)),
-                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, ClickitBorderStrong),
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
                                 .testTag("view_all_active_orders_button")
                         ) {
                             Text(
-                                text = "View all ${activeOrders.size} active orders",
-                                color = ClickitPeach
+                                text = "View All (${activeOrders.size})",
+                                color = ClickitBrandTeal
                             )
                         }
                     }
@@ -497,9 +489,9 @@ fun ActiveOrderStatusTrackerCard(
     val status = BookingStatus.fromRaw(booking.status)
     val needsAttention = booking.needsUserAttention()
     val borderColor = when {
-        status == BookingStatus.DISPUTED -> ClickitCrimson
-        status == BookingStatus.QUOTE_PENDING -> ClickitWarning
-        else -> ClickitPeach.copy(alpha = 0.45f)
+        status == BookingStatus.DISPUTED -> ClickitCrimson.copy(alpha = 0.5f)
+        status == BookingStatus.QUOTE_PENDING -> ClickitWarning.copy(alpha = 0.5f)
+        else -> ClickitBorder
     }
 
     val pickupOtpVisible = status in listOf(BookingStatus.PICKUP_SCHEDULED, BookingStatus.CONFIRMED) &&
@@ -512,19 +504,19 @@ fun ActiveOrderStatusTrackerCard(
     ) && booking.deliveryOtp.isNotBlank()
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
+        colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         border = BorderStroke(1.dp, borderColor),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(12.dp),
         modifier = modifier
             .fillMaxWidth()
             .testTag("active_order_card_${booking.id}")
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Top bar: category + parcel code + status pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -537,37 +529,35 @@ fun ActiveOrderStatusTrackerCard(
                     CategoryBadge(booking.category)
                     Text(
                         text = booking.parcelCode,
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = ClickitPeach
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                        color = ClickitBrandTeal
                     )
                 }
                 BookingStatusBadge(booking.status)
             }
 
-            // Shop & Items summary
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     text = booking.shopName,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = ClickitIvory,
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    color = ClickitTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = booking.itemsSummary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = ClickitMutedText,
+                    color = ClickitTextSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // Progress stepper or dispute notice
             if (status == BookingStatus.DISPUTED) {
                 Surface(
-                    color = ClickitBurgundy.copy(alpha = 0.7f),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, ClickitCrimson),
+                    color = ClickitDangerContainer,
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ClickitCrimson.copy(alpha = 0.4f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -578,13 +568,13 @@ fun ActiveOrderStatusTrackerCard(
                         Icon(
                             imageVector = Icons.Filled.ReportProblem,
                             contentDescription = null,
-                            tint = ClickitPeachSoft,
+                            tint = ClickitCrimson,
                             modifier = Modifier.size(18.dp)
                         )
                         Text(
-                            text = "Support review active — tap to view updates",
+                            text = "Under review",
                             style = MaterialTheme.typography.labelMedium,
-                            color = ClickitIvory
+                            color = ClickitCrimson
                         )
                     }
                 }
@@ -596,11 +586,10 @@ fun ActiveOrderStatusTrackerCard(
                 )
             }
 
-            // Current milestone & action callouts
             Surface(
-                color = ClickitMidnight.copy(alpha = 0.75f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, ClickitSubtleLine),
+                color = ClickitLightBg,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, ClickitBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
@@ -615,7 +604,7 @@ fun ActiveOrderStatusTrackerCard(
                         Text(
                             text = booking.milestone.ifBlank { status.label },
                             style = MaterialTheme.typography.labelLarge,
-                            color = ClickitInfo,
+                            color = ClickitBrandTeal,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -624,7 +613,7 @@ fun ActiveOrderStatusTrackerCard(
                         Text(
                             text = formatInr(booking.totalMinor),
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = ClickitPeach
+                            color = ClickitTextPrimary
                         )
                     }
 
@@ -640,24 +629,20 @@ fun ActiveOrderStatusTrackerCard(
                             Icon(
                                 imageVector = Icons.Filled.Schedule,
                                 contentDescription = null,
-                                tint = ClickitMutedText,
+                                tint = ClickitTextSecondary,
                                 modifier = Modifier.size(13.dp)
                             )
                             Text(
                                 text = booking.slotWindowLabel.ifBlank { "Scheduled" },
                                 style = MaterialTheme.typography.labelSmall,
-                                color = ClickitMutedText
+                                color = ClickitTextSecondary
                             )
                         }
 
                         val payColor = if (booking.paymentStatus == "paid") ClickitSuccess else ClickitWarning
                         val payBg = if (booking.paymentStatus == "paid") ClickitSuccessContainer else ClickitWarningContainer
-                        val payLabel = if (booking.paymentStatus == "paid") {
-                            booking.paymentRef.takeIf { it.isNotBlank() }?.let { "Paid • RuPay" } ?: "Paid • RuPay"
-                        } else {
-                            "Pay via RuPay"
-                        }
-                        Surface(color = payBg, shape = RoundedCornerShape(50)) {
+                        val payLabel = if (booking.paymentStatus == "paid") "Paid • RuPay" else "Pay via RuPay"
+                        Surface(color = payBg, shape = RoundedCornerShape(6.dp)) {
                             Text(
                                 text = payLabel,
                                 style = MaterialTheme.typography.labelSmall,
@@ -669,7 +654,6 @@ fun ActiveOrderStatusTrackerCard(
                 }
             }
 
-            // Inline OTP or quote approval badge
             if (status == BookingStatus.QUOTE_PENDING || pickupOtpVisible || deliveryOtpVisible || needsAttention) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -679,8 +663,8 @@ fun ActiveOrderStatusTrackerCard(
                     if (status == BookingStatus.QUOTE_PENDING) {
                         Surface(
                             color = ClickitWarningContainer,
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, ClickitWarning.copy(alpha = 0.6f))
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, ClickitWarning.copy(alpha = 0.45f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -713,13 +697,13 @@ fun ActiveOrderStatusTrackerCard(
                         Text(
                             text = "Track",
                             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                            color = ClickitPeach
+                            color = ClickitBrandTeal
                         )
                         Spacer(Modifier.width(2.dp))
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Open order details",
-                            tint = ClickitPeach,
+                            tint = ClickitBrandTeal,
                             modifier = Modifier.size(15.dp)
                         )
                     }
@@ -732,25 +716,25 @@ fun ActiveOrderStatusTrackerCard(
 @Composable
 private fun OtpInlinePill(label: String, code: String) {
     Surface(
-        color = ClickitInfoContainer,
-        shape = RoundedCornerShape(10.dp),
-        border = BorderStroke(1.dp, ClickitInfo.copy(alpha = 0.55f))
+        color = ClickitBrandTealTint,
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, ClickitBrandTeal.copy(alpha = 0.35f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Icon(
                 imageVector = Icons.Filled.Lock,
                 contentDescription = null,
-                tint = ClickitInfo,
+                tint = ClickitBrandTeal,
                 modifier = Modifier.size(13.dp)
             )
             Text(
                 text = "$label: $code",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = ClickitInfo
+                color = ClickitBrandTeal
             )
         }
     }
@@ -764,9 +748,9 @@ private fun OrderStatusSummaryChip(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = ClickitSlateDeep,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, ClickitSlate),
+        color = ClickitLightSurface,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
         modifier = modifier
     ) {
         Column(
@@ -781,7 +765,7 @@ private fun OrderStatusSummaryChip(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = ClickitMutedText,
+                color = ClickitTextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -791,31 +775,19 @@ private fun OrderStatusSummaryChip(
 
 @Composable
 private fun LiveStatusBadge() {
-    val transition = rememberInfiniteTransition(label = "live_pulse")
-    val pulseAlpha by transition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse_alpha"
-    )
-
     Surface(
         color = ClickitSuccessContainer,
-        shape = RoundedCornerShape(50),
-        border = BorderStroke(1.dp, ClickitSuccess.copy(alpha = 0.4f))
+        shape = RoundedCornerShape(6.dp),
+        border = BorderStroke(1.dp, ClickitSuccess.copy(alpha = 0.35f))
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(7.dp)
-                    .alpha(pulseAlpha)
+                    .size(6.dp)
                     .clip(CircleShape)
                     .background(ClickitSuccess)
             )

@@ -1,12 +1,7 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,9 +29,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -45,16 +39,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.BookingStatus
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitInfoContainer
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
+import com.example.ui.theme.ClickitLightSurfaceVar
 import com.example.ui.theme.ClickitSuccess
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 
 enum class SmartBatchStage(
     val stepNumber: Int,
@@ -102,31 +95,20 @@ fun SmartBatchVisualTracker(
 
     val animatedProgress by animateFloatAsState(
         targetValue = currentStage / stages.lastIndex.toFloat(),
-        animationSpec = spring(stiffness = 280f),
+        animationSpec = spring(stiffness = 320f),
         label = "smart_batch_progress"
     )
 
-    val pulseTransition = rememberInfiniteTransition(label = "stage_pulse")
-    val activeHaloAlpha by pulseTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.85f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "active_halo_alpha"
-    )
-
     Surface(
-        color = ClickitMidnight.copy(alpha = 0.82f),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, ClickitSubtleLine),
+        color = ClickitLightBg,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
         modifier = modifier
             .fillMaxWidth()
             .testTag("smart_batch_visual_tracker")
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -140,14 +122,13 @@ fun SmartBatchVisualTracker(
                     modifier = Modifier.weight(1f)
                 ) {
                     Surface(
-                        color = ClickitInfoContainer,
-                        shape = RoundedCornerShape(50),
-                        border = BorderStroke(1.dp, ClickitInfo.copy(alpha = 0.45f))
+                        color = ClickitBrandTealTint,
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = if (isSmartBatch) "Smart Batch Tracker" else "Pickup & Return",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = ClickitInfo,
+                            text = if (isSmartBatch) "Smart Batch" else "Pickup & Return",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = ClickitBrandTeal,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
@@ -155,7 +136,7 @@ fun SmartBatchVisualTracker(
                         Text(
                             text = slotWindowLabel,
                             style = MaterialTheme.typography.labelSmall,
-                            color = ClickitMutedText,
+                            color = ClickitTextSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -163,35 +144,30 @@ fun SmartBatchVisualTracker(
                 }
                 Text(
                     text = "Step ${currentStage + 1}/${stages.size}",
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                    color = ClickitPeach
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                    color = ClickitTextSecondary
                 )
             }
 
-            // Progress rail + circular stage icons
+            // Progress rail + clean stage circles
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
-                // Background track + filled track spanning centers of step 1..4
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .height(4.dp)
+                        .height(3.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(ClickitSlate)
+                        .background(ClickitBorder)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(animatedProgress)
-                            .height(4.dp)
+                            .height(3.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(ClickitSuccess, ClickitPeach)
-                                )
-                            )
+                            .background(ClickitBrandTeal)
                     )
                 }
 
@@ -205,42 +181,33 @@ fun SmartBatchVisualTracker(
                         val isCurrent = idx == currentStage
                         val accent = when {
                             isCompleted -> ClickitSuccess
-                            isCurrent -> ClickitPeach
-                            else -> ClickitSlate
+                            isCurrent -> ClickitBrandTeal
+                            else -> ClickitBorder
                         }
                         val fill = when {
                             isCompleted -> ClickitSuccess
-                            isCurrent -> ClickitSlateDeep
-                            else -> ClickitMidnight
+                            isCurrent -> ClickitLightSurface
+                            else -> ClickitLightSurfaceVar
                         }
                         val iconTint = when {
-                            isCompleted -> ClickitMidnight
-                            isCurrent -> ClickitPeach
-                            else -> ClickitMutedText
+                            isCompleted -> Color.White
+                            isCurrent -> ClickitBrandTeal
+                            else -> ClickitTextSecondary
                         }
 
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
+                                .size(28.dp)
                                 .testTag("tracker_step_${stage.name.lowercase()}"),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isCurrent) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .alpha(activeHaloAlpha)
-                                        .clip(CircleShape)
-                                        .background(ClickitPeach.copy(alpha = 0.22f))
-                                )
-                            }
                             Box(
                                 modifier = Modifier
                                     .size(if (isCurrent) 28.dp else 24.dp)
                                     .clip(CircleShape)
                                     .background(fill)
                                     .border(
-                                        width = if (isCurrent) 2.dp else 1.2.dp,
+                                        width = if (isCurrent) 2.dp else 1.dp,
                                         color = accent,
                                         shape = CircleShape
                                     ),
@@ -250,7 +217,7 @@ fun SmartBatchVisualTracker(
                                     imageVector = if (isCompleted) Icons.Filled.Check else stage.icon,
                                     contentDescription = stage.label.replace("\n", " "),
                                     tint = iconTint,
-                                    modifier = Modifier.size(14.dp)
+                                    modifier = Modifier.size(13.dp)
                                 )
                             }
                         }
@@ -266,15 +233,15 @@ fun SmartBatchVisualTracker(
                 stages.forEachIndexed { idx, stage ->
                     val labelColor = when {
                         idx < currentStage -> ClickitSuccess
-                        idx == currentStage -> ClickitIvory
-                        else -> ClickitMutedText
+                        idx == currentStage -> ClickitTextPrimary
+                        else -> ClickitTextSecondary
                     }
                     Text(
                         text = stage.label,
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontSize = 11.sp,
                             lineHeight = 13.sp,
-                            fontWeight = if (idx == currentStage) FontWeight.Bold else FontWeight.Medium
+                            fontWeight = if (idx == currentStage) FontWeight.SemiBold else FontWeight.Normal
                         ),
                         color = labelColor,
                         textAlign = TextAlign.Center,

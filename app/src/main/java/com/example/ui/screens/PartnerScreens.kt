@@ -52,6 +52,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -68,20 +69,15 @@ import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.NeonIconBadge
 import com.example.ui.components.SmartBatchLiveMap
-import com.example.ui.theme.ClickitBurgundy
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
 import com.example.ui.theme.ClickitCrimson
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitInfoContainer
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitLightSurface
 import com.example.ui.theme.ClickitSuccess
 import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 import com.example.ui.theme.ClickitWarning
 import com.example.ui.theme.ClickitWarningContainer
 
@@ -106,41 +102,42 @@ fun PartnerOffersScreen(
     ) {
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                border = BorderStroke(1.dp, if (online) ClickitSuccess else ClickitSlate)
+                colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, if (online) ClickitSuccess.copy(alpha = 0.5f) else ClickitBorder)
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                         NeonIconBadge(
                             icon = Icons.AutoMirrored.Filled.DirectionsBike,
-                            tint = if (online) ClickitSuccess else ClickitPeach,
-                            glowColor = if (online) ClickitSuccess else ClickitPeach,
-                            size = 42.dp,
+                            tint = if (online) ClickitSuccess else ClickitBrandTeal,
+                            size = 40.dp,
                             iconSize = 20.dp,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(10.dp)
                         )
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = if (online) "Online • Accepting Smart Batches" else "Offline • Shift Paused",
+                                text = if (online) "Online" else "Offline",
                                 style = MaterialTheme.typography.titleSmall,
-                                color = ClickitIvory
+                                color = ClickitTextPrimary
                             )
                             Text(
-                                text = "Vehicle: 2-Wheeler • Max 25 kg • ${activeTasks.size} active stops",
+                                text = "2-Wheeler • ${activeTasks.size} stops",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = ClickitMutedText
+                                color = ClickitTextSecondary
                             )
                         }
                     }
                     Switch(
                         checked = online,
                         onCheckedChange = onToggleOnline,
-                        colors = SwitchDefaults.colors(checkedThumbColor = ClickitMidnight, checkedTrackColor = ClickitPeach),
+                        colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = ClickitBrandTeal),
                         modifier = Modifier.testTag("partner_online_switch")
                     )
                 }
@@ -148,12 +145,7 @@ fun PartnerOffersScreen(
         }
 
         item {
-            Text("Open Tasks", style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
-            Text(
-                text = "Full address unlocks after accept.",
-                style = MaterialTheme.typography.bodySmall,
-                color = ClickitMutedText
-            )
+            Text("Tasks", style = MaterialTheme.typography.titleLarge, color = ClickitTextPrimary)
         }
 
         if (!online) {
@@ -161,47 +153,48 @@ fun PartnerOffersScreen(
                 EmptyStateCard(
                     icon = Icons.AutoMirrored.Filled.DirectionsBike,
                     title = "Offline",
-                    subtitle = "Go online for pickup tasks."
+                    subtitle = "Go online for tasks."
                 )
             }
         } else {
             when (offeredTasksState) {
-                is UiState.Loading -> item { LoadingStateView("Finding tasks...") }
+                is UiState.Loading -> item { LoadingStateView("Loading...") }
                 is UiState.Error -> item { ErrorRetryCard(offeredTasksState.message, onRetry = onRetry) }
                 is UiState.Success -> {
                     if (offeredTasksState.data.isEmpty()) {
                         item {
                             EmptyStateCard(
                                 icon = Icons.Filled.LocalShipping,
-                                title = "No open tasks",
-                                subtitle = "New pickup tasks appear here."
+                                title = "No tasks",
+                                subtitle = "Tasks appear here."
                             )
                         }
                     } else {
                         items(offeredTasksState.data, key = { it.id }) { task ->
                             Card(
-                                colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                                border = BorderStroke(1.dp, ClickitSubtleLine),
-                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                                border = BorderStroke(1.dp, ClickitBorder),
+                                shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth().testTag("task_offer_${task.id}")
                             ) {
-                                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                            Surface(color = ClickitMidnight, shape = RoundedCornerShape(8.dp)) {
+                                            Surface(color = ClickitBrandTealTint, shape = RoundedCornerShape(6.dp)) {
                                                 Text(
                                                     text = "${task.taskType.uppercase()} • ${task.batchId}",
                                                     style = MaterialTheme.typography.labelSmall,
-                                                    color = ClickitInfo,
+                                                    color = ClickitBrandTeal,
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                                 )
                                             }
                                             if (task.estimatedWeightKg > FREE_DELIVERY_WEIGHT_THRESHOLD_KG) {
-                                                Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                                                Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(6.dp)) {
                                                     Text(
                                                         text = ">5 KG BULK",
                                                         style = MaterialTheme.typography.labelSmall,
@@ -214,24 +207,25 @@ fun PartnerOffersScreen(
                                         Text(
                                             text = "Payout ${formatInr(task.payoutMinor)}",
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = ClickitPeach
+                                            color = ClickitBrandTeal
                                         )
                                     }
 
-                                    Text("${task.pickupZone} -> ${task.dropZone}", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                                    Text("${task.pickupZone} -> ${task.dropZone}", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                                     Text(
                                         text = "Parcel ${task.parcelCode} • ${task.itemCount} items • ~${task.estimatedWeightKg} kg • ${task.timeWindowLabel}",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = ClickitMutedText
+                                        color = ClickitTextSecondary
                                     )
 
                                     Button(
                                         onClick = { onAcceptTask(task) },
                                         enabled = !isBusy,
-                                        colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight),
-                                        modifier = Modifier.fillMaxWidth().testTag("accept_task_${task.id}")
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White),
+                                        modifier = Modifier.fillMaxWidth().height(48.dp).testTag("accept_task_${task.id}")
                                     ) {
-                                        Text("Accept Task Offer")
+                                        Text("Accept")
                                     }
                                 }
                             }
@@ -295,11 +289,11 @@ fun PartnerRouteScreen(
         var otpError by remember { mutableStateOf<String?>(null) }
         AlertDialog(
             onDismissRequest = { otpDialogTask = null },
-            containerColor = ClickitSlateDeep,
+            containerColor = ClickitLightSurface,
             title = {
                 Text(
-                    text = if (task.taskType == "pickup") "Verify Pickup Handover OTP" else "Verify Customer Delivery OTP",
-                    color = ClickitIvory
+                    text = if (task.taskType == "pickup") "Pickup OTP" else "Delivery OTP",
+                    color = ClickitTextPrimary
                 )
             },
             text = {
@@ -307,7 +301,7 @@ fun PartnerRouteScreen(
                     Text(
                         text = "${task.itemCount} items • Parcel ${task.parcelCode} • OTP: $expectedOtp",
                         style = MaterialTheme.typography.bodySmall,
-                        color = ClickitMutedText
+                        color = ClickitTextSecondary
                     )
                     OutlinedTextField(
                         value = enteredOtp,
@@ -316,10 +310,11 @@ fun PartnerRouteScreen(
                             otpError = null
                         },
                         label = { Text("4-digit OTP *") },
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
                     )
                     if (otpError != null) {
-                        Text(otpError!!, style = MaterialTheme.typography.bodySmall, color = ClickitPeachSoft)
+                        Text(otpError!!, style = MaterialTheme.typography.bodySmall, color = ClickitCrimson)
                     }
                 }
             },
@@ -327,7 +322,7 @@ fun PartnerRouteScreen(
                 Button(
                     onClick = {
                         if (expectedOtp.isNotBlank() && enteredOtp.trim() != expectedOtp) {
-                            otpError = "OTP mismatch. Check with customer before taking custody."
+                            otpError = "Invalid OTP. Verify with customer."
                         } else {
                             if (task.taskType == "pickup") {
                                 onAdvanceTask(
@@ -347,11 +342,12 @@ fun PartnerRouteScreen(
                             otpDialogTask = null
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight)
-                ) { Text("Verify & Confirm") }
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
+                ) { Text("Verify") }
             },
             dismissButton = {
-                TextButton(onClick = { otpDialogTask = null }) { Text("Cancel", color = ClickitIvory) }
+                TextButton(onClick = { otpDialogTask = null }) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
@@ -360,12 +356,12 @@ fun PartnerRouteScreen(
         var reason by remember { mutableStateOf("Customer unavailable") }
         AlertDialog(
             onDismissRequest = { exceptionTarget = null },
-            containerColor = ClickitSlateDeep,
-            title = { Text("Flag Stop Exception", color = ClickitIvory) },
+            containerColor = ClickitLightSurface,
+            title = { Text("Report Issue", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Other completed stops in this batch remain untouched.", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
-                    OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason *") })
+                    Text("Other stops remain unaffected.", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
+                    OutlinedTextField(value = reason, onValueChange = { reason = it }, label = { Text("Reason *") }, shape = RoundedCornerShape(10.dp))
                 }
             },
             confirmButton = {
@@ -374,25 +370,26 @@ fun PartnerRouteScreen(
                         onReportException(exceptionTarget!!, reason)
                         exceptionTarget = null
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitCrimson, contentColor = ClickitIvory)
-                ) { Text("Report Exception") }
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitCrimson, contentColor = Color.White)
+                ) { Text("Submit") }
             },
             dismissButton = {
-                TextButton(onClick = { exceptionTarget = null }) { Text("Cancel", color = ClickitIvory) }
+                TextButton(onClick = { exceptionTarget = null }) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
 
     when (partnerTasksState) {
-        is UiState.Loading -> LoadingStateView("Loading active batch route...")
+        is UiState.Loading -> LoadingStateView("Loading...")
         is UiState.Error -> Box(Modifier.padding(16.dp)) { ErrorRetryCard(partnerTasksState.message, onRetry = onRetry) }
         is UiState.Success -> {
             if (active.isEmpty()) {
                 Box(Modifier.padding(16.dp)) {
                     EmptyStateCard(
                         icon = Icons.Filled.LocalShipping,
-                        title = "No active stops in route",
-                        subtitle = "Accept a pickup or return offer from the Offers tab to start your route."
+                        title = "No active stops",
+                        subtitle = "Accept a task in Offers."
                     )
                 }
             } else {
@@ -402,10 +399,12 @@ fun PartnerRouteScreen(
                 ) {
                     item(key = "partner_gps_card") {
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
+                            colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                            shape = RoundedCornerShape(12.dp),
                             border = BorderStroke(
                                 1.dp,
-                                if (shareLiveGps && hasLocationPermission) ClickitSuccess.copy(alpha = 0.65f) else ClickitSlate
+                                if (shareLiveGps && hasLocationPermission) ClickitSuccess.copy(alpha = 0.5f) else ClickitBorder
                             )
                         ) {
                             Column(
@@ -424,26 +423,26 @@ fun PartnerRouteScreen(
                                         Icon(
                                             imageVector = Icons.Filled.GpsFixed,
                                             contentDescription = null,
-                                            tint = if (shareLiveGps && hasLocationPermission) ClickitSuccess else ClickitPeach,
+                                            tint = if (shareLiveGps && hasLocationPermission) ClickitSuccess else ClickitBrandTeal,
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(Modifier.width(10.dp))
                                         Column {
                                             Text(
                                                 text = if (hasLocationPermission && shareLiveGps) {
-                                                    "Live GPS Sharing Active"
+                                                    "GPS Active"
                                                 } else if (!hasLocationPermission) {
-                                                    "Enable GPS for Live Tracking"
+                                                    "Enable GPS"
                                                 } else {
-                                                    "Live GPS Sharing Paused"
+                                                    "GPS Paused"
                                                 },
                                                 style = MaterialTheme.typography.titleSmall,
-                                                color = ClickitIvory
+                                                color = ClickitTextPrimary
                                             )
                                             Text(
-                                                text = "Broadcasts your real-time location to customers on this batch",
+                                                text = "Live customer tracking",
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = ClickitMutedText
+                                                color = ClickitTextSecondary
                                             )
                                         }
                                     }
@@ -452,7 +451,7 @@ fun PartnerRouteScreen(
                                             checked = shareLiveGps,
                                             onCheckedChange = { shareLiveGps = it },
                                             colors = SwitchDefaults.colors(
-                                                checkedThumbColor = ClickitMidnight,
+                                                checkedThumbColor = Color.White,
                                                 checkedTrackColor = ClickitSuccess
                                             ),
                                             modifier = Modifier.testTag("partner_gps_switch")
@@ -469,22 +468,23 @@ fun PartnerRouteScreen(
                                                 )
                                             )
                                         },
+                                        shape = RoundedCornerShape(10.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = ClickitPeach,
-                                            contentColor = ClickitMidnight
+                                            containerColor = ClickitBrandTeal,
+                                            contentColor = Color.White
                                         ),
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(48.dp)
                                             .testTag("grant_partner_gps_button")
                                     ) {
-                                        Text("Allow Location Access")
+                                        Text("Enable GPS")
                                     }
                                     if (permissionDeniedNote) {
                                         Text(
-                                            text = "Location permission was denied. Enable location in system settings to share live GPS.",
+                                            text = "Enable location in Settings.",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = ClickitPeachSoft
+                                            color = ClickitCrimson
                                         )
                                     }
                                 }
@@ -499,7 +499,7 @@ fun PartnerRouteScreen(
                             booking = primaryBooking,
                             task = primaryTask,
                             mapHeight = 210.dp,
-                            headerTitle = "Live Batch Route Map"
+                            headerTitle = "Route Map"
                         )
                     }
 
@@ -508,29 +508,30 @@ fun PartnerRouteScreen(
                         val isHeavyBulk = (linkedBooking?.weightKg ?: task.estimatedWeightKg) > FREE_DELIVERY_WEIGHT_THRESHOLD_KG
                         val isUrgent = linkedBooking?.itemsSummary?.contains("URGENT +25%", ignoreCase = true) == true
                         Card(
-                            colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                            border = BorderStroke(1.dp, ClickitSubtleLine),
-                            shape = RoundedCornerShape(16.dp)
+                            colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                            border = BorderStroke(1.dp, ClickitBorder),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text("Stop ${task.batchStopIndex} • ${task.parcelCode}", style = MaterialTheme.typography.titleSmall, color = ClickitPeach)
-                                    Text(task.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = ClickitInfo)
+                                    Text("Stop ${task.batchStopIndex} • ${task.parcelCode}", style = MaterialTheme.typography.titleSmall, color = ClickitBrandTeal)
+                                    Text(task.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = ClickitBrandTeal)
                                 }
                                 FlowRow(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Surface(color = ClickitInfoContainer, shape = RoundedCornerShape(8.dp)) {
+                                    Surface(color = ClickitBrandTealTint, shape = RoundedCornerShape(6.dp)) {
                                         Text(
-                                            text = "Scan QR & Check OTP",
+                                            text = "Scan QR & OTP",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = ClickitInfo,
+                                            color = ClickitBrandTeal,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }
                                     if (isUrgent) {
-                                        Surface(color = ClickitWarningContainer, shape = RoundedCornerShape(8.dp)) {
+                                        Surface(color = ClickitWarningContainer, shape = RoundedCornerShape(6.dp)) {
                                             Text(
                                                 text = "URGENT +25%",
                                                 style = MaterialTheme.typography.labelSmall,
@@ -540,7 +541,7 @@ fun PartnerRouteScreen(
                                         }
                                     }
                                     if (isHeavyBulk) {
-                                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
+                                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(6.dp)) {
                                             Text(
                                                 text = "FREE >5 KG BULK",
                                                 style = MaterialTheme.typography.labelSmall,
@@ -550,11 +551,11 @@ fun PartnerRouteScreen(
                                         }
                                     }
                                 }
-                                Text("${task.taskType.replaceFirstChar { it.uppercase() }}: ${task.pickupZone} -> ${task.dropZone}", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                                Text("${task.taskType.replaceFirstChar { it.uppercase() }}: ${task.pickupZone} -> ${task.dropZone}", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                                 if (linkedBooking != null) {
-                                    Text("Stop Address: ${linkedBooking.addressSummary}", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                                    Text(linkedBooking.addressSummary, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                                 }
-                                Text("${task.itemCount} items • ~${task.estimatedWeightKg} kg • ${task.timeWindowLabel}", style = MaterialTheme.typography.bodySmall, color = ClickitPeachSoft)
+                                Text("${task.itemCount} items • ~${task.estimatedWeightKg} kg • ${task.timeWindowLabel}", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
 
                                 when (task.status) {
                                     "accepted" -> {
@@ -563,9 +564,10 @@ fun PartnerRouteScreen(
                                                 onAdvanceTask(task, "arrived", null, "Partner arrived at stop (${task.parcelCode})")
                                             },
                                             enabled = !isBusy,
-                                            colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight),
-                                            modifier = Modifier.fillMaxWidth().testTag("partner_arrived_${task.id}")
-                                        ) { Text("Mark Arrived at Stop") }
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White),
+                                            modifier = Modifier.fillMaxWidth().height(48.dp).testTag("partner_arrived_${task.id}")
+                                        ) { Text("Arrived") }
                                     }
                                     "arrived" -> {
                                         Button(
@@ -582,10 +584,11 @@ fun PartnerRouteScreen(
                                                 }
                                             },
                                             enabled = !isBusy,
-                                            colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight),
-                                            modifier = Modifier.fillMaxWidth().testTag("partner_collect_${task.id}")
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White),
+                                            modifier = Modifier.fillMaxWidth().height(48.dp).testTag("partner_collect_${task.id}")
                                         ) {
-                                            Text(if (task.taskType == "pickup") "Verify OTP & Collect Parcel" else "Collect Sealed Return from Shop")
+                                            Text(if (task.taskType == "pickup") "Collect Parcel" else "Collect Return")
                                         }
                                     }
                                     "picked_up" -> {
@@ -603,22 +606,24 @@ fun PartnerRouteScreen(
                                                 }
                                             },
                                             enabled = !isBusy,
-                                            colors = ButtonDefaults.buttonColors(containerColor = ClickitSuccess, contentColor = ClickitMidnight),
-                                            modifier = Modifier.fillMaxWidth().testTag("partner_complete_${task.id}")
+                                            shape = RoundedCornerShape(10.dp),
+                                            colors = ButtonDefaults.buttonColors(containerColor = ClickitSuccess, contentColor = Color.White),
+                                            modifier = Modifier.fillMaxWidth().height(48.dp).testTag("partner_complete_${task.id}")
                                         ) {
-                                            Text(if (task.taskType == "pickup") "Confirm Handover to Worker" else "Verify Customer OTP & Deliver")
+                                            Text(if (task.taskType == "pickup") "Hand Over" else "Deliver")
                                         }
                                     }
                                 }
 
                                 OutlinedButton(
                                     onClick = { exceptionTarget = task },
-                                    border = BorderStroke(1.dp, ClickitCrimson),
-                                    modifier = Modifier.fillMaxWidth()
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, ClickitCrimson.copy(alpha = 0.55f)),
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
                                 ) {
-                                    Icon(Icons.Filled.ReportProblem, contentDescription = null, tint = ClickitPeachSoft)
+                                    Icon(Icons.Filled.ReportProblem, contentDescription = null, tint = ClickitCrimson)
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Report Stop Exception", color = ClickitPeachSoft)
+                                    Text("Report Issue", color = ClickitCrimson)
                                 }
                             }
                         }
@@ -642,24 +647,25 @@ fun PartnerEarningsScreen(partnerTasksState: UiState<List<DeliveryTask>>) {
     ) {
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = ClickitBurgundy.copy(alpha = 0.7f)),
-                border = BorderStroke(1.dp, ClickitPeach)
+                colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, ClickitBorder)
             ) {
-                Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         NeonIconBadge(
                             icon = Icons.Filled.AccountBalanceWallet,
-                            tint = ClickitPeach,
-                            glowColor = ClickitPeach,
+                            tint = ClickitBrandTeal,
                             size = 38.dp,
                             iconSize = 19.dp,
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(10.dp)
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text("Delivery Partner Payouts", style = MaterialTheme.typography.titleSmall, color = ClickitPeachSoft)
+                        Text("Payouts", style = MaterialTheme.typography.titleSmall, color = ClickitTextSecondary)
                     }
-                    Text(formatInr(totalPayout), style = MaterialTheme.typography.displaySmall, color = ClickitIvory)
-                    Text("${completed.size} completed custody handovers", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                    Text(formatInr(totalPayout), style = MaterialTheme.typography.displaySmall, color = ClickitBrandTeal)
+                    Text("${completed.size} completed", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                 }
             }
         }
@@ -668,23 +674,25 @@ fun PartnerEarningsScreen(partnerTasksState: UiState<List<DeliveryTask>>) {
             item {
                 EmptyStateCard(
                     icon = Icons.Filled.CheckCircle,
-                    title = "No completed tasks yet",
-                    subtitle = "Complete a pickup handover or customer delivery to see payouts here."
+                    title = "No payouts yet",
+                    subtitle = "Completed tasks appear here."
                 )
             }
         } else {
             items(completed, key = { it.id }) { t ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitSlate)
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ClickitBorder)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("${t.parcelCode} • ${t.taskType.uppercase()}", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                            Text("${t.parcelCode} • ${t.taskType.uppercase()}", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                             Text("+${formatInr(t.payoutMinor)}", style = MaterialTheme.typography.titleSmall, color = ClickitSuccess)
                         }
-                        HorizontalDivider(color = ClickitSubtleLine, modifier = Modifier.padding(vertical = 6.dp))
-                        Text("${t.pickupZone} -> ${t.dropZone}", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                        HorizontalDivider(color = ClickitBorder, modifier = Modifier.padding(vertical = 6.dp))
+                        Text("${t.pickupZone} -> ${t.dropZone}", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                     }
                 }
             }

@@ -1,10 +1,5 @@
 package com.example.ui.components
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -41,10 +36,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -63,17 +56,15 @@ import com.example.data.estimateEtaMinutes
 import com.example.data.isValidCoordinate
 import com.example.data.maskAddressForOffer
 import com.example.data.resolveZoneCoordinates
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitInfoContainer
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
 import com.example.ui.theme.ClickitSuccess
 import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 import com.example.ui.theme.ClickitWarning
 import com.example.ui.theme.ClickitWarningContainer
 import java.text.SimpleDateFormat
@@ -219,32 +210,12 @@ fun SmartBatchLiveMap(
     booking: Booking?,
     task: DeliveryTask?,
     modifier: Modifier = Modifier,
-    mapHeight: Dp = 228.dp,
-    headerTitle: String = "Smart Batch Live Route"
+    mapHeight: Dp = 216.dp,
+    headerTitle: String = "Route Map"
 ) {
     val telemetry = remember(booking, task) {
         resolveSmartBatchRouteTelemetry(booking = booking, task = task)
     }
-
-    val pulseTransition = rememberInfiniteTransition(label = "agent_gps_pulse")
-    val gpsPulseAlpha by pulseTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 850),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "gps_pulse_alpha"
-    )
-    val radarScale by pulseTransition.animateFloat(
-        initialValue = 0.75f,
-        targetValue = 1.45f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "radar_scale"
-    )
 
     val lastUpdatedLabel = remember(task?.locationUpdatedAt) {
         task?.locationUpdatedAt?.toDate()?.let { date ->
@@ -253,12 +224,9 @@ fun SmartBatchLiveMap(
     }
 
     Surface(
-        color = ClickitSlateDeep,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(
-            1.dp,
-            if (telemetry.hasLiveAgentGps) ClickitSuccess.copy(alpha = 0.55f) else ClickitPeach.copy(alpha = 0.45f)
-        ),
+        color = ClickitLightSurface,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
         modifier = modifier
             .fillMaxWidth()
             .testTag("smart_batch_live_map")
@@ -280,14 +248,14 @@ fun SmartBatchLiveMap(
                     Icon(
                         imageVector = Icons.Filled.Map,
                         contentDescription = null,
-                        tint = ClickitPeach,
+                        tint = ClickitBrandTeal,
                         modifier = Modifier.size(18.dp)
                     )
                     Column {
                         Text(
                             text = headerTitle,
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = ClickitIvory,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = ClickitTextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -302,7 +270,7 @@ fun SmartBatchLiveMap(
                         Text(
                             text = stopInfo,
                             style = MaterialTheme.typography.labelSmall,
-                            color = ClickitMutedText,
+                            color = ClickitTextSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -311,28 +279,22 @@ fun SmartBatchLiveMap(
 
                 Surface(
                     color = if (telemetry.hasLiveAgentGps) ClickitSuccessContainer else ClickitWarningContainer,
-                    shape = RoundedCornerShape(50),
-                    border = BorderStroke(
-                        1.dp,
-                        if (telemetry.hasLiveAgentGps) ClickitSuccess.copy(alpha = 0.5f)
-                        else ClickitWarning.copy(alpha = 0.45f)
-                    )
+                    shape = RoundedCornerShape(6.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(7.dp)
-                                .alpha(if (telemetry.hasLiveAgentGps) gpsPulseAlpha else 1f)
+                                .size(6.dp)
                                 .clip(CircleShape)
                                 .background(if (telemetry.hasLiveAgentGps) ClickitSuccess else ClickitWarning)
                         )
                         Text(
-                            text = if (telemetry.hasLiveAgentGps) "LIVE GPS" else "AWAITING GPS",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            text = if (telemetry.hasLiveAgentGps) "LIVE" else "NO GPS",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                             color = if (telemetry.hasLiveAgentGps) ClickitSuccess else ClickitWarning
                         )
                     }
@@ -344,9 +306,9 @@ fun SmartBatchLiveMap(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Surface(
-                    color = ClickitMidnight.copy(alpha = 0.8f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, ClickitSubtleLine),
+                    color = ClickitLightBg,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, ClickitBorder),
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
@@ -357,16 +319,16 @@ fun SmartBatchLiveMap(
                             telemetry.etaMinutes
                         ),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = ClickitInfo,
+                        color = ClickitBrandTeal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
                 Surface(
-                    color = ClickitMidnight.copy(alpha = 0.8f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, ClickitSubtleLine)
+                    color = ClickitLightBg,
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, ClickitBorder)
                 ) {
                     Text(
                         text = if (lastUpdatedLabel != null) {
@@ -377,7 +339,7 @@ fun SmartBatchLiveMap(
                             "Batch open"
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = ClickitMutedText,
+                        color = ClickitTextSecondary,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }
@@ -386,15 +348,13 @@ fun SmartBatchLiveMap(
             SmartBatchRouteCanvas(
                 telemetry = telemetry,
                 agentBearing = task?.agentBearing?.toFloat() ?: 0f,
-                radarScale = radarScale,
-                gpsPulseAlpha = gpsPulseAlpha,
                 mapHeight = mapHeight
             )
 
             Surface(
-                color = ClickitMidnight.copy(alpha = 0.72f),
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, ClickitSubtleLine),
+                color = ClickitLightBg,
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, ClickitBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -411,14 +371,14 @@ fun SmartBatchLiveMap(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(7.dp)
                                 .clip(CircleShape)
-                                .background(ClickitPeach)
+                                .background(ClickitTextPrimary)
                         )
                         Text(
                             text = telemetry.pickupLabel,
                             style = MaterialTheme.typography.labelSmall,
-                            color = ClickitIvory,
+                            color = ClickitTextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -426,7 +386,7 @@ fun SmartBatchLiveMap(
                     Text(
                         text = " → ",
                         style = MaterialTheme.typography.labelSmall,
-                        color = ClickitMutedText
+                        color = ClickitTextSecondary
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -435,14 +395,14 @@ fun SmartBatchLiveMap(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(7.dp)
                                 .clip(CircleShape)
-                                .background(ClickitInfo)
+                                .background(ClickitBrandTeal)
                         )
                         Text(
                             text = telemetry.dropLabel,
                             style = MaterialTheme.typography.labelSmall,
-                            color = ClickitIvory,
+                            color = ClickitTextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -457,8 +417,6 @@ fun SmartBatchLiveMap(
 private fun SmartBatchRouteCanvas(
     telemetry: SmartBatchRouteTelemetry,
     agentBearing: Float,
-    radarScale: Float,
-    gpsPulseAlpha: Float,
     mapHeight: Dp
 ) {
     var focusOnAgent by remember { mutableStateOf(false) }
@@ -475,13 +433,9 @@ private fun SmartBatchRouteCanvas(
         modifier = Modifier
             .fillMaxWidth()
             .height(mapHeight)
-            .clip(RoundedCornerShape(14.dp))
-            .background(
-                Brush.radialGradient(
-                    listOf(Color(0xFF1E2440), ClickitMidnight, Color(0xFF101326))
-                )
-            )
-            .border(1.dp, ClickitSlate, RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFFEEF2F6))
+            .border(1.dp, ClickitBorder, RoundedCornerShape(10.dp))
             .testTag("smart_batch_route_canvas")
     ) {
         val widthPx = constraints.maxWidth.toFloat().coerceAtLeast(1f)
@@ -490,21 +444,21 @@ private fun SmartBatchRouteCanvas(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val gridStepX = size.width / 6f
             val gridStepY = size.height / 4f
-            val gridColor = ClickitSlate.copy(alpha = 0.28f)
+            val roadColor = Color.White.copy(alpha = 0.85f)
             for (i in 1..5) {
                 drawLine(
-                    color = gridColor,
+                    color = roadColor,
                     start = Offset(gridStepX * i, 0f),
                     end = Offset(gridStepX * i, size.height),
-                    strokeWidth = 1.dp.toPx()
+                    strokeWidth = if (i % 2 == 0) 2.5.dp.toPx() else 1.2.dp.toPx()
                 )
             }
             for (j in 1..3) {
                 drawLine(
-                    color = gridColor,
+                    color = roadColor,
                     start = Offset(0f, gridStepY * j),
                     end = Offset(size.width, gridStepY * j),
-                    strokeWidth = 1.dp.toPx()
+                    strokeWidth = if (j == 2) 2.5.dp.toPx() else 1.2.dp.toPx()
                 )
             }
 
@@ -523,70 +477,55 @@ private fun SmartBatchRouteCanvas(
                 )
             }
 
-            // Concentric hub rings around destination
             drawCircle(
-                color = ClickitInfo.copy(alpha = 0.14f),
-                radius = 28.dp.toPx(),
+                color = ClickitBrandTeal.copy(alpha = 0.14f),
+                radius = 22.dp.toPx(),
                 center = dropOffset,
                 style = Stroke(width = 1.dp.toPx())
             )
-            drawCircle(
-                color = ClickitPeach.copy(alpha = 0.14f),
-                radius = 26.dp.toPx(),
-                center = pickupOffset,
-                style = Stroke(width = 1.dp.toPx())
-            )
 
-            // Planned dashed route
-            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f)
+            val dashEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
             if (agentOffset != null) {
                 drawLine(
                     color = ClickitSuccess,
                     start = pickupOffset,
                     end = agentOffset,
-                    strokeWidth = 4.dp.toPx(),
+                    strokeWidth = 3.5.dp.toPx(),
                     cap = StrokeCap.Round
                 )
                 drawLine(
-                    color = ClickitPeach.copy(alpha = 0.85f),
+                    color = ClickitBrandTeal,
                     start = agentOffset,
                     end = dropOffset,
-                    strokeWidth = 3.5.dp.toPx(),
+                    strokeWidth = 3.dp.toPx(),
                     cap = StrokeCap.Round,
                     pathEffect = dashEffect
                 )
 
-                // Pulsing live GPS radar ring & heading vector
-                drawCircle(
-                    color = ClickitSuccess.copy(alpha = (1f - (radarScale - 0.75f) / 0.7f).coerceIn(0.08f, 0.45f)),
-                    radius = 22.dp.toPx() * radarScale,
-                    center = agentOffset
-                )
                 val rad = Math.toRadians(agentBearing.toDouble() - 90.0)
                 val headingTip = Offset(
-                    x = agentOffset.x + (cos(rad) * 26.dp.toPx()).toFloat(),
-                    y = agentOffset.y + (sin(rad) * 26.dp.toPx()).toFloat()
+                    x = agentOffset.x + (cos(rad) * 22.dp.toPx()).toFloat(),
+                    y = agentOffset.y + (sin(rad) * 22.dp.toPx()).toFloat()
                 )
                 drawLine(
-                    color = ClickitSuccess.copy(alpha = gpsPulseAlpha),
+                    color = ClickitSuccess,
                     start = agentOffset,
                     end = headingTip,
-                    strokeWidth = 2.5.dp.toPx(),
+                    strokeWidth = 2.dp.toPx(),
                     cap = StrokeCap.Round
                 )
             } else {
                 drawLine(
-                    color = ClickitPeach.copy(alpha = 0.85f),
+                    color = ClickitBrandTeal,
                     start = pickupOffset,
                     end = dropOffset,
-                    strokeWidth = 3.5.dp.toPx(),
+                    strokeWidth = 3.dp.toPx(),
                     cap = StrokeCap.Round,
                     pathEffect = dashEffect
                 )
             }
         }
 
-        // Pickup badge positioned dynamically at projected coordinates
         Box(
             modifier = Modifier
                 .offset {
@@ -598,13 +537,12 @@ private fun SmartBatchRouteCanvas(
         ) {
             MapPinBadge(
                 icon = Icons.Filled.LocationOn,
-                containerColor = ClickitPeach,
-                contentColor = ClickitMidnight,
+                containerColor = ClickitTextPrimary,
+                contentColor = Color.White,
                 label = "Pickup"
             )
         }
 
-        // Drop / Shop Hub badge positioned dynamically
         Box(
             modifier = Modifier
                 .offset {
@@ -616,13 +554,12 @@ private fun SmartBatchRouteCanvas(
         ) {
             MapPinBadge(
                 icon = Icons.Filled.Storefront,
-                containerColor = ClickitInfoContainer,
-                contentColor = ClickitInfo,
+                containerColor = ClickitBrandTealTint,
+                contentColor = ClickitBrandTeal,
                 label = "Drop"
             )
         }
 
-        // Live Delivery Agent marker positioned from Firestore GPS telemetry
         if (projected.agent != null) {
             Box(
                 modifier = Modifier
@@ -637,14 +574,13 @@ private fun SmartBatchRouteCanvas(
             }
         }
 
-        // Live GPS coordinates chip (top-left)
         Surface(
-            color = ClickitMidnight.copy(alpha = 0.86f),
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, ClickitSubtleLine),
+            color = ClickitLightSurface.copy(alpha = 0.94f),
+            shape = RoundedCornerShape(6.dp),
+            border = BorderStroke(1.dp, ClickitBorder),
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(10.dp)
+                .padding(8.dp)
         ) {
             Text(
                 text = if (telemetry.agentPoint != null) {
@@ -655,22 +591,21 @@ private fun SmartBatchRouteCanvas(
                         telemetry.agentPoint.lng
                     )
                 } else {
-                    "Route Telemetry • No Key Needed"
+                    "Route Telemetry"
                 },
                 style = MaterialTheme.typography.labelSmall,
-                color = if (telemetry.agentPoint != null) ClickitSuccess else ClickitMutedText,
-                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp)
+                color = if (telemetry.agentPoint != null) ClickitSuccess else ClickitTextSecondary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
             )
         }
 
-        // Recenter / Focus Agent button (bottom-end)
         Surface(
-            color = ClickitMidnight.copy(alpha = 0.88f),
+            color = ClickitLightSurface,
             shape = CircleShape,
-            border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.6f)),
+            border = BorderStroke(1.dp, ClickitBorder),
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(10.dp)
+                .padding(8.dp)
         ) {
             IconButton(
                 onClick = {
@@ -683,7 +618,7 @@ private fun SmartBatchRouteCanvas(
                 Icon(
                     imageVector = Icons.Filled.MyLocation,
                     contentDescription = if (focusOnAgent) "Fit full route" else "Focus delivery agent",
-                    tint = if (focusOnAgent) ClickitSuccess else ClickitPeach,
+                    tint = if (focusOnAgent) ClickitSuccess else ClickitBrandTeal,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -700,9 +635,8 @@ private fun MapPinBadge(
 ) {
     Surface(
         color = containerColor,
-        shape = RoundedCornerShape(50),
-        border = BorderStroke(1.5.dp, ClickitMidnight),
-        shadowElevation = 4.dp
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, Color.White)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -713,11 +647,11 @@ private fun MapPinBadge(
                 imageVector = icon,
                 contentDescription = label,
                 tint = contentColor,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(13.dp)
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                 color = contentColor
             )
         }
@@ -729,8 +663,7 @@ private fun MapAgentMarker() {
     Surface(
         color = ClickitSuccess,
         shape = CircleShape,
-        border = BorderStroke(2.dp, ClickitMidnight),
-        shadowElevation = 6.dp
+        border = BorderStroke(2.dp, Color.White)
     ) {
         Box(
             modifier = Modifier.padding(7.dp),
@@ -739,8 +672,8 @@ private fun MapAgentMarker() {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.DirectionsBike,
                 contentDescription = "Live Delivery Agent",
-                tint = ClickitMidnight,
-                modifier = Modifier.size(18.dp)
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
             )
         }
     }

@@ -46,6 +46,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,19 +63,17 @@ import com.example.ui.components.CategoryBadge
 import com.example.ui.components.EmptyStateCard
 import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
-import com.example.ui.components.NeonIconBadge
-import com.example.ui.theme.ClickitBurgundy
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBorderStrong
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
 import com.example.ui.theme.ClickitSuccess
 import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
+import com.example.ui.theme.ClickitWarning
+import com.example.ui.theme.ClickitWarningContainer
 
 data class OrderHistoryStats(
     val completedCount: Int,
@@ -107,44 +107,40 @@ fun OrderHistoryScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit = {}
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .minimumInteractiveComponentSize()
-                    .testTag("order_history_back_button")
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = ClickitIvory
-                )
-            }
-            NeonIconBadge(
-                icon = Icons.Filled.History,
-                tint = ClickitPeach,
-                glowColor = ClickitPeach,
-                size = 38.dp,
-                iconSize = 19.dp
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Order History",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = ClickitIvory
-                )
-                Text(
-                    text = "Completed services & 1-tap re-order",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = ClickitMutedText
-                )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(ClickitLightBg)
+    ) {
+        Surface(color = ClickitLightSurface, modifier = Modifier.fillMaxWidth()) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .minimumInteractiveComponentSize()
+                            .testTag("order_history_back_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = ClickitTextPrimary
+                        )
+                    }
+                    Text(
+                        text = "Order History",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = ClickitTextPrimary,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                HorizontalDivider(color = ClickitBorder)
             }
         }
 
@@ -172,7 +168,7 @@ fun OrderHistoryList(
 
     when (orderHistoryState) {
         is UiState.Loading -> Box(modifier = modifier.fillMaxSize()) {
-            LoadingStateView("Loading your order history...")
+            LoadingStateView("Loading...")
         }
         is UiState.Error -> Box(
             modifier = modifier
@@ -191,9 +187,9 @@ fun OrderHistoryList(
                 ) {
                     EmptyStateCard(
                         icon = Icons.Filled.History,
-                        title = "No completed orders yet",
-                        subtitle = "Once a laundry, tailoring, or footwear order is delivered and confirmed, it appears here for easy re-ordering.",
-                        actionLabel = "Book a Service",
+                        title = "No past orders",
+                        subtitle = "Completed orders appear here.",
+                        actionLabel = "Explore",
                         onAction = onExploreClick
                     )
                 }
@@ -218,10 +214,18 @@ fun OrderHistoryList(
                                 FilterChip(
                                     selected = selectedCategory == null,
                                     onClick = { selectedCategory = null },
+                                    shape = RoundedCornerShape(8.dp),
                                     label = { Text("All (${allCompleted.size})") },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = ClickitPeach,
-                                        selectedLabelColor = ClickitMidnight
+                                        selectedContainerColor = ClickitBrandTeal,
+                                        selectedLabelColor = Color.White,
+                                        containerColor = ClickitLightSurface,
+                                        labelColor = ClickitTextPrimary
+                                    ),
+                                    border = FilterChipDefaults.filterChipBorder(
+                                        enabled = true,
+                                        selected = selectedCategory == null,
+                                        borderColor = ClickitBorder
                                     ),
                                     modifier = Modifier.testTag("history_filter_all")
                                 )
@@ -231,10 +235,18 @@ fun OrderHistoryList(
                                 FilterChip(
                                     selected = selectedCategory == cat,
                                     onClick = { selectedCategory = if (selectedCategory == cat) null else cat },
+                                    shape = RoundedCornerShape(8.dp),
                                     label = { Text(chipLabel) },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = ClickitPeach,
-                                        selectedLabelColor = ClickitMidnight
+                                        selectedContainerColor = ClickitBrandTeal,
+                                        selectedLabelColor = Color.White,
+                                        containerColor = ClickitLightSurface,
+                                        labelColor = ClickitTextPrimary
+                                    ),
+                                    border = FilterChipDefaults.filterChipBorder(
+                                        enabled = true,
+                                        selected = selectedCategory == cat,
+                                        borderColor = ClickitBorder
                                     ),
                                     modifier = Modifier.testTag("history_filter_${cat.key}")
                                 )
@@ -246,9 +258,9 @@ fun OrderHistoryList(
                         item {
                             EmptyStateCard(
                                 icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                                title = "No ${selectedCategory?.label?.lowercase() ?: ""} orders in history",
-                                subtitle = "Switch category filters to view your other completed orders.",
-                                actionLabel = "Show All",
+                                title = "No orders",
+                                subtitle = "Try another category.",
+                                actionLabel = "Reset",
                                 onAction = { selectedCategory = null }
                             )
                         }
@@ -270,34 +282,35 @@ fun OrderHistoryList(
 @Composable
 private fun OrderHistorySummaryCard(stats: OrderHistoryStats) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.35f)),
-        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             HistoryStatColumn(
                 label = "Completed",
                 value = stats.completedCount.toString(),
-                accent = ClickitPeach,
+                accent = ClickitBrandTeal,
                 modifier = Modifier.weight(1f)
             )
             HistoryStatColumn(
-                label = "Total Spent",
+                label = "Spent",
                 value = formatInr(stats.totalSpentMinor),
-                accent = ClickitIvory,
+                accent = ClickitTextPrimary,
                 modifier = Modifier.weight(1f)
             )
             HistoryStatColumn(
                 label = "Smart Batch",
                 value = stats.smartBatchCount.toString(),
-                accent = ClickitInfo,
+                accent = ClickitSuccess,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -308,7 +321,7 @@ private fun OrderHistorySummaryCard(stats: OrderHistoryStats) {
 private fun HistoryStatColumn(
     label: String,
     value: String,
-    accent: androidx.compose.ui.graphics.Color,
+    accent: Color,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -326,7 +339,7 @@ private fun HistoryStatColumn(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = ClickitMutedText
+            color = ClickitTextSecondary
         )
     }
 }
@@ -340,16 +353,17 @@ fun OrderHistoryCard(
     val fulfilmentLabel = FulfilmentMethod.fromRaw(booking.fulfilmentMethod).label
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSlate),
-        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("order_history_card_${booking.id}")
             .clickable(onClick = onOrderClick)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Row(
@@ -365,7 +379,7 @@ fun OrderHistoryCard(
                     Text(
                         text = booking.parcelCode,
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                        color = ClickitPeach
+                        color = ClickitBrandTeal
                     )
                 }
                 BookingStatusBadge(booking.status)
@@ -375,21 +389,21 @@ fun OrderHistoryCard(
                 Text(
                     text = booking.shopName,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = ClickitIvory,
+                    color = ClickitTextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = booking.itemsSummary,
                     style = MaterialTheme.typography.bodySmall,
-                    color = ClickitMutedText,
+                    color = ClickitTextSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = "$fulfilmentLabel • ${booking.slotWindowLabel}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = ClickitInfo
+                    color = ClickitBrandTeal
                 )
             }
 
@@ -405,7 +419,7 @@ fun OrderHistoryCard(
                     if (booking.paymentStatus == "paid") {
                         Surface(
                             color = ClickitSuccessContainer,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(6.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -430,8 +444,8 @@ fun OrderHistoryCard(
                     }
                     if (booking.ratingStars > 0L) {
                         Surface(
-                            color = ClickitBurgundy.copy(alpha = 0.55f),
-                            shape = RoundedCornerShape(8.dp)
+                            color = ClickitWarningContainer,
+                            shape = RoundedCornerShape(6.dp)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -441,13 +455,13 @@ fun OrderHistoryCard(
                                 Icon(
                                     imageVector = Icons.Filled.Star,
                                     contentDescription = "Rated ${booking.ratingStars} stars",
-                                    tint = ClickitPeach,
+                                    tint = ClickitWarning,
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Text(
                                     text = "${booking.ratingStars}.0",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = ClickitPeachSoft
+                                    color = ClickitWarning
                                 )
                             }
                         }
@@ -457,11 +471,11 @@ fun OrderHistoryCard(
                 Text(
                     text = formatInr(booking.totalMinor),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = ClickitPeach
+                    color = ClickitTextPrimary
                 )
             }
 
-            HorizontalDivider(color = ClickitSubtleLine)
+            HorizontalDivider(color = ClickitBorder)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -469,8 +483,8 @@ fun OrderHistoryCard(
             ) {
                 OutlinedButton(
                     onClick = onOrderClick,
-                    border = BorderStroke(1.dp, ClickitSlate),
-                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, ClickitBorderStrong),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp)
@@ -479,20 +493,20 @@ fun OrderHistoryCard(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
                         contentDescription = null,
-                        tint = ClickitIvory,
+                        tint = ClickitTextPrimary,
                         modifier = Modifier.size(17.dp)
                     )
                     Spacer(Modifier.width(6.dp))
-                    Text("Receipt", color = ClickitIvory)
+                    Text("Receipt", color = ClickitTextPrimary)
                 }
 
                 Button(
                     onClick = onReorderClick,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ClickitPeach,
-                        contentColor = ClickitMidnight
+                        containerColor = ClickitBrandTeal,
+                        contentColor = Color.White
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .weight(1.25f)
                         .height(48.dp)
@@ -506,7 +520,7 @@ fun OrderHistoryCard(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = "Re-order",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }
             }

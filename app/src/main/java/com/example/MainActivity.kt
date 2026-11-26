@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -38,6 +39,7 @@ import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -53,6 +55,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -69,6 +72,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.credentials.CredentialManager
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
@@ -114,13 +118,14 @@ import com.example.ui.screens.WorkerDashboardScreen
 import com.example.ui.screens.WorkerDukaanScreen
 import com.example.ui.screens.WorkerEarningsScreen
 import com.example.ui.screens.WorkerJobsScreen
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
 import com.example.ui.theme.ClickitCrimson
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlateDeep
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 import com.example.ui.theme.ClickitTheme
 import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
@@ -135,9 +140,18 @@ class MainActivity : ComponentActivity() {
         if (FirebaseApp.getApps(applicationContext).isEmpty()) {
             FirebaseApp.initializeApp(applicationContext)
         }
-        enableEdgeToEdge()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                android.graphics.Color.WHITE,
+                android.graphics.Color.WHITE
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                android.graphics.Color.WHITE,
+                android.graphics.Color.WHITE
+            )
+        )
         setContent {
-            ClickitTheme(darkTheme = true) {
+            ClickitTheme(darkTheme = false) {
                 ClickitAppRoot()
             }
         }
@@ -216,15 +230,15 @@ fun ClickitAppRoot() {
         }
 
         is AuthDestination.EvaluatingRole -> {
-            Surface(color = ClickitMidnight, modifier = Modifier.fillMaxSize()) {
+            Surface(color = ClickitLightBg, modifier = Modifier.fillMaxSize()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    LoadingStateView("Checking your Clickit role...")
+                    LoadingStateView("Loading...")
                 }
             }
         }
 
         is AuthDestination.Error -> {
-            Surface(color = ClickitMidnight, modifier = Modifier.fillMaxSize()) {
+            Surface(color = ClickitLightBg, modifier = Modifier.fillMaxSize()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -246,7 +260,7 @@ fun ClickitAppRoot() {
                                 .fillMaxWidth()
                                 .height(48.dp)
                         ) {
-                            Text("Sign Out", color = ClickitPeachSoft)
+                            Text("Sign Out", color = ClickitCrimson)
                         }
                     }
                 }
@@ -394,11 +408,11 @@ fun ClickitMainShell(
                 slotWindowLabel = pending.slotWindowLabel
             )
             coroutineScope.launch {
-                snackbarHostState.showSnackbar("Smart Batch pickup alert sent for ${pending.parcelCode}")
+                snackbarHostState.showSnackbar("Alert sent for ${pending.parcelCode}")
             }
         } else if (!granted) {
             coroutineScope.launch {
-                snackbarHostState.showSnackbar("Notification permission denied — status alerts shown in-app")
+                snackbarHostState.showSnackbar("Notifications disabled")
             }
         }
     }
@@ -419,7 +433,7 @@ fun ClickitMainShell(
                 slotWindowLabel = target.slotWindowLabel
             )
             coroutineScope.launch {
-                snackbarHostState.showSnackbar("Smart Batch alert: ${target.parcelCode} is Ready for Pickup")
+                snackbarHostState.showSnackbar("${target.parcelCode} ready for pickup")
             }
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             pendingNotificationOrder = target
@@ -470,12 +484,12 @@ fun ClickitMainShell(
                 showOrderHistoryScreen = false
                 selectedTab = 1
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("${booking.shopName} is currently unavailable — choose another local provider.")
+                    snackbarHostState.showSnackbar("${booking.shopName} unavailable.")
                 }
             }
             !matchedShop.openStatus -> {
                 coroutineScope.launch {
-                    snackbarHostState.showSnackbar("${matchedShop.shopName} is currently paused for new orders.")
+                    snackbarHostState.showSnackbar("${matchedShop.shopName} is paused.")
                 }
             }
             else -> {
@@ -526,14 +540,14 @@ fun ClickitMainShell(
         ModalBottomSheet(
             onDismissRequest = { showNotificationsSheet = false },
             sheetState = sheetState,
-            containerColor = ClickitMidnight,
-            contentColor = ClickitIvory
+            containerColor = ClickitLightSurface,
+            contentColor = ClickitTextPrimary
         ) {
             Column(modifier = Modifier.fillMaxWidth().height(420.dp)) {
                 Text(
                     text = "Notifications",
                     style = MaterialTheme.typography.titleLarge,
-                    color = ClickitIvory,
+                    color = ClickitTextPrimary,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
                 )
                 CustomerActivityScreen(
@@ -669,7 +683,7 @@ fun ClickitMainShell(
         val isExpandedWidth = maxWidth >= 720.dp
 
         Scaffold(
-        containerColor = ClickitMidnight,
+        containerColor = ClickitLightBg,
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -691,26 +705,39 @@ fun ClickitMainShell(
         },
         bottomBar = {
             if (!isExpandedWidth) {
-                NavigationBar(containerColor = ClickitSlateDeep) {
-                    navTabs.forEachIndexed { index, tab ->
-                        NavigationBarItem(
-                            selected = selectedTab == index && !showActiveOrdersScreen && !showOrderHistoryScreen,
-                            onClick = {
-                                showActiveOrdersScreen = false
-                                showOrderHistoryScreen = false
-                                selectedTab = index
-                            },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = ClickitMidnight,
-                                selectedTextColor = ClickitPeach,
-                                indicatorColor = ClickitPeach,
-                                unselectedIconColor = ClickitMutedText,
-                                unselectedTextColor = ClickitMutedText
-                            ),
-                            modifier = Modifier.testTag(tab.tag)
-                        )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    HorizontalDivider(color = ClickitBorder)
+                    NavigationBar(
+                        containerColor = ClickitLightSurface,
+                        tonalElevation = 0.dp
+                    ) {
+                        navTabs.forEachIndexed { index, tab ->
+                            NavigationBarItem(
+                                selected = selectedTab == index && !showActiveOrdersScreen && !showOrderHistoryScreen,
+                                onClick = {
+                                    showActiveOrdersScreen = false
+                                    showOrderHistoryScreen = false
+                                    selectedTab = index
+                                },
+                                icon = { Icon(tab.icon, contentDescription = tab.label) },
+                                label = {
+                                    Text(
+                                        text = tab.label,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = ClickitBrandTeal,
+                                    selectedTextColor = ClickitBrandTeal,
+                                    indicatorColor = ClickitBrandTealTint,
+                                    unselectedIconColor = ClickitTextSecondary,
+                                    unselectedTextColor = ClickitTextSecondary
+                                ),
+                                modifier = Modifier.testTag(tab.tag)
+                            )
+                        }
                     }
                 }
             }
@@ -723,7 +750,7 @@ fun ClickitMainShell(
         ) {
             if (isExpandedWidth) {
                 NavigationRail(
-                    containerColor = ClickitSlateDeep,
+                    containerColor = ClickitLightSurface,
                     modifier = Modifier.fillMaxHeight()
                 ) {
                     navTabs.forEachIndexed { index, tab ->
@@ -735,18 +762,26 @@ fun ClickitMainShell(
                                 selectedTab = index
                             },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
+                            label = {
+                                Text(
+                                    text = tab.label,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
                             colors = NavigationRailItemDefaults.colors(
-                                selectedIconColor = ClickitMidnight,
-                                selectedTextColor = ClickitPeach,
-                                indicatorColor = ClickitPeach,
-                                unselectedIconColor = ClickitMutedText,
-                                unselectedTextColor = ClickitMutedText
+                                selectedIconColor = ClickitBrandTeal,
+                                selectedTextColor = ClickitBrandTeal,
+                                indicatorColor = ClickitBrandTealTint,
+                                unselectedIconColor = ClickitTextSecondary,
+                                unselectedTextColor = ClickitTextSecondary
                             ),
                             modifier = Modifier.testTag(tab.tag)
                         )
                     }
                 }
+                VerticalDivider(color = ClickitBorder)
             }
 
             Box(modifier = Modifier.weight(1f).fillMaxHeight()) {

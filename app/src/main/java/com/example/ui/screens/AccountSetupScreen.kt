@@ -24,7 +24,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsBike
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.Button
@@ -55,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,16 +65,15 @@ import com.example.data.UserRole
 import com.example.ui.components.ClickitBrandLogoMark
 import com.example.ui.components.ClickitWordmark
 import com.example.ui.components.NeonIconBadge
-import com.example.ui.theme.ClickitBurgundy
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
 import com.example.ui.theme.ClickitCrimson
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
+import com.example.ui.theme.ClickitDangerContainer
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -129,18 +128,18 @@ fun AccountSetupScreen(
     }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
-        focusedBorderColor = ClickitPeach,
-        unfocusedBorderColor = ClickitSlate,
-        focusedTextColor = ClickitIvory,
-        unfocusedTextColor = ClickitIvory,
-        focusedLabelColor = ClickitPeach,
-        unfocusedLabelColor = ClickitMutedText,
-        focusedContainerColor = ClickitMidnight,
-        unfocusedContainerColor = ClickitMidnight
+        focusedBorderColor = ClickitBrandTeal,
+        unfocusedBorderColor = ClickitBorder,
+        focusedTextColor = ClickitTextPrimary,
+        unfocusedTextColor = ClickitTextPrimary,
+        focusedLabelColor = ClickitBrandTeal,
+        unfocusedLabelColor = ClickitTextSecondary,
+        focusedContainerColor = ClickitLightSurface,
+        unfocusedContainerColor = ClickitLightSurface
     )
 
     Scaffold(
-        containerColor = ClickitMidnight,
+        containerColor = ClickitLightBg,
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
@@ -155,7 +154,7 @@ fun AccountSetupScreen(
                     .widthIn(max = 560.dp)
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Row(
@@ -164,9 +163,9 @@ fun AccountSetupScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ClickitBrandLogoMark(size = 42.dp)
+                        ClickitBrandLogoMark(size = 38.dp)
                         Spacer(Modifier.width(10.dp))
-                        ClickitWordmark(fontSizeSp = 22f)
+                        ClickitWordmark(fontSizeSp = 20f)
                     }
                     IconButton(
                         onClick = onSignOut,
@@ -177,15 +176,15 @@ fun AccountSetupScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Logout,
                             contentDescription = "Switch Google account",
-                            tint = ClickitMutedText
+                            tint = ClickitTextSecondary
                         )
                     }
                 }
 
                 Text(
-                    text = "Set up your account",
+                    text = "Profile setup",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = ClickitIvory
+                    color = ClickitTextPrimary
                 )
 
                 if (!showRolePicker) {
@@ -195,14 +194,14 @@ fun AccountSetupScreen(
                         UserRole.PARTNER -> Icons.AutoMirrored.Filled.DirectionsBike
                     }
                     val activeTitle = when (selectedRole) {
-                        UserRole.CUSTOMER -> "Customer Account"
-                        UserRole.WORKER -> "Shopper / Store Account"
-                        UserRole.PARTNER -> "Delivery Account"
+                        UserRole.CUSTOMER -> "Customer"
+                        UserRole.WORKER -> "Shop Owner"
+                        UserRole.PARTNER -> "Delivery"
                     }
                     Surface(
-                        color = ClickitBurgundy.copy(alpha = 0.7f),
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.75f)),
+                        color = ClickitBrandTealTint,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, ClickitBrandTeal.copy(alpha = 0.4f)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .minimumInteractiveComponentSize()
@@ -220,22 +219,21 @@ fun AccountSetupScreen(
                             ) {
                                 NeonIconBadge(
                                     icon = activeIcon,
-                                    tint = ClickitPeach,
-                                    glowColor = ClickitPeach,
+                                    tint = ClickitBrandTeal,
                                     size = 34.dp,
                                     iconSize = 18.dp,
-                                    shape = RoundedCornerShape(10.dp)
+                                    shape = RoundedCornerShape(8.dp)
                                 )
                                 Text(
                                     text = activeTitle,
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = ClickitIvory
+                                    color = ClickitTextPrimary
                                 )
                             }
                             Text(
                                 text = "Change",
                                 style = MaterialTheme.typography.labelMedium,
-                                color = ClickitPeach
+                                color = ClickitBrandTeal
                             )
                         }
                     }
@@ -257,9 +255,9 @@ fun AccountSetupScreen(
                                 UserRole.PARTNER -> "Delivery"
                             }
                             Surface(
-                                color = if (selected) ClickitBurgundy else ClickitSlateDeep,
-                                shape = RoundedCornerShape(14.dp),
-                                border = BorderStroke(1.2.dp, if (selected) ClickitPeach else ClickitSlate),
+                                color = if (selected) ClickitBrandTealTint else ClickitLightSurface,
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, if (selected) ClickitBrandTeal else ClickitBorder),
                                 modifier = Modifier
                                     .weight(1f)
                                     .testTag("setup_role_${role.key}")
@@ -276,16 +274,15 @@ fun AccountSetupScreen(
                                 ) {
                                     NeonIconBadge(
                                         icon = roleIcon,
-                                        tint = if (selected) ClickitPeach else ClickitIvory,
-                                        glowColor = if (selected) ClickitPeach else ClickitInfo,
+                                        tint = if (selected) ClickitBrandTeal else ClickitTextSecondary,
                                         size = 34.dp,
                                         iconSize = 18.dp,
-                                        shape = RoundedCornerShape(10.dp)
+                                        shape = RoundedCornerShape(8.dp)
                                     )
                                     Text(
                                         text = shortLabel,
                                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                                        color = if (selected) ClickitPeach else ClickitIvory
+                                        color = if (selected) ClickitBrandTeal else ClickitTextPrimary
                                     )
                                 }
                             }
@@ -294,9 +291,10 @@ fun AccountSetupScreen(
                 }
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitSlate),
-                    shape = RoundedCornerShape(18.dp)
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    border = BorderStroke(1.dp, ClickitBorder),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -305,9 +303,10 @@ fun AccountSetupScreen(
                         OutlinedTextField(
                             value = displayName,
                             onValueChange = { displayName = it; validationError = null },
-                            label = { Text("Your Name *") },
+                            label = { Text("Name *") },
                             singleLine = true,
                             colors = fieldColors,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth().testTag("setup_name_input")
                         )
 
@@ -317,24 +316,26 @@ fun AccountSetupScreen(
                             label = {
                                 Text(
                                     when (selectedRole) {
-                                        UserRole.PARTNER -> "Delivery Zone / City *"
-                                        else -> "Area / City *"
+                                        UserRole.PARTNER -> "Zone / City *"
+                                        else -> "Area *"
                                     }
                                 )
                             },
-                            placeholder = { Text("e.g. Koramangala, Bengaluru") },
+                            placeholder = { Text("Koramangala, Bengaluru") },
                             singleLine = true,
                             colors = fieldColors,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth().testTag("setup_locality_input")
                         )
 
                         OutlinedTextField(
                             value = phone,
                             onValueChange = { phone = it },
-                            label = { Text("Phone (optional)") },
-                            placeholder = { Text("+91 ...") },
+                            label = { Text("Phone") },
+                            placeholder = { Text("+91") },
                             singleLine = true,
                             colors = fieldColors,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth().testTag("setup_phone_input")
                         )
 
@@ -350,43 +351,46 @@ fun AccountSetupScreen(
                                         checked = addAddressNow,
                                         onCheckedChange = { addAddressNow = it },
                                         colors = CheckboxDefaults.colors(
-                                            checkedColor = ClickitPeach,
-                                            checkmarkColor = ClickitMidnight
+                                            checkedColor = ClickitBrandTeal,
+                                            checkmarkColor = Color.White
                                         )
                                     )
-                                    Text("Add pickup address now", style = MaterialTheme.typography.bodyMedium, color = ClickitIvory)
+                                    Text("Add address", style = MaterialTheme.typography.bodyMedium, color = ClickitTextPrimary)
                                 }
 
                                 if (addAddressNow) {
                                     OutlinedTextField(
                                         value = houseNo,
                                         onValueChange = { houseNo = it; validationError = null },
-                                        label = { Text("House / Flat No *") },
+                                        label = { Text("House / Flat *") },
                                         singleLine = true,
                                         colors = fieldColors,
+                                        shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     OutlinedTextField(
                                         value = street,
                                         onValueChange = { street = it; validationError = null },
-                                        label = { Text("Street / Road *") },
+                                        label = { Text("Street *") },
                                         singleLine = true,
                                         colors = fieldColors,
+                                        shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                     OutlinedTextField(
                                         value = postalCode,
                                         onValueChange = { postalCode = it; validationError = null },
-                                        label = { Text("PIN Code *") },
+                                        label = { Text("PIN *") },
                                         singleLine = true,
                                         colors = fieldColors,
+                                        shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                             }
 
                             UserRole.WORKER -> {
-                                Text("Shop Details", style = MaterialTheme.typography.titleSmall, color = ClickitPeach)
+                                Text("Shop", style = MaterialTheme.typography.titleSmall, color = ClickitBrandTeal)
 
                                 OutlinedTextField(
                                     value = shopName,
@@ -394,6 +398,7 @@ fun AccountSetupScreen(
                                     label = { Text("Shop Name *") },
                                     singleLine = true,
                                     colors = fieldColors,
+                                    shape = RoundedCornerShape(10.dp),
                                     modifier = Modifier.fillMaxWidth().testTag("setup_shop_name_input")
                                 )
 
@@ -425,9 +430,17 @@ fun AccountSetupScreen(
                                                 }
                                             },
                                             label = { Text(cat.label) },
+                                            shape = RoundedCornerShape(8.dp),
                                             colors = FilterChipDefaults.filterChipColors(
-                                                selectedContainerColor = ClickitPeach,
-                                                selectedLabelColor = ClickitMidnight
+                                                selectedContainerColor = ClickitBrandTeal,
+                                                selectedLabelColor = Color.White,
+                                                containerColor = ClickitLightBg,
+                                                labelColor = ClickitTextPrimary
+                                            ),
+                                            border = FilterChipDefaults.filterChipBorder(
+                                                enabled = true,
+                                                selected = shopCategory == cat,
+                                                borderColor = ClickitBorder
                                             )
                                         )
                                     }
@@ -439,6 +452,7 @@ fun AccountSetupScreen(
                                     label = { Text("Shop Address *") },
                                     singleLine = true,
                                     colors = fieldColors,
+                                    shape = RoundedCornerShape(10.dp),
                                     modifier = Modifier.fillMaxWidth().testTag("setup_shop_address_input")
                                 )
 
@@ -446,9 +460,10 @@ fun AccountSetupScreen(
                                     OutlinedTextField(
                                         value = firstServiceName,
                                         onValueChange = { firstServiceName = it; validationError = null },
-                                        label = { Text("First Service *") },
+                                        label = { Text("Service *") },
                                         singleLine = true,
                                         colors = fieldColors,
+                                        shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.weight(1.2f)
                                     )
                                     OutlinedTextField(
@@ -457,6 +472,7 @@ fun AccountSetupScreen(
                                         label = { Text("Price (₹) *") },
                                         singleLine = true,
                                         colors = fieldColors,
+                                        shape = RoundedCornerShape(10.dp),
                                         modifier = Modifier.weight(0.8f)
                                     )
                                 }
@@ -464,32 +480,33 @@ fun AccountSetupScreen(
                                 OutlinedTextField(
                                     value = firstServiceUnit,
                                     onValueChange = { firstServiceUnit = it; validationError = null },
-                                    label = { Text("Unit (cloth / kg / pair) *") },
+                                    label = { Text("Unit *") },
                                     singleLine = true,
                                     colors = fieldColors,
+                                    shape = RoundedCornerShape(10.dp),
                                     modifier = Modifier.fillMaxWidth()
                                 )
                             }
 
                             UserRole.PARTNER -> {
                                 Text(
-                                    text = "You will see pickup and return tasks in your zone right after setup.",
+                                    text = "Zone tasks appear after setup.",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = ClickitMutedText
+                                    color = ClickitTextSecondary
                                 )
                             }
                         }
 
                         if (validationError != null) {
                             Surface(
-                                color = ClickitCrimson.copy(alpha = 0.25f),
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, ClickitCrimson)
+                                color = ClickitDangerContainer,
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, ClickitCrimson.copy(alpha = 0.4f))
                             ) {
                                 Text(
                                     text = validationError!!,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = ClickitPeachSoft,
+                                    color = ClickitCrimson,
                                     modifier = Modifier.padding(10.dp)
                                 )
                             }
@@ -502,18 +519,18 @@ fun AccountSetupScreen(
                         val nameClean = displayName.trim()
                         val locClean = locality.trim()
                         if (nameClean.isEmpty()) {
-                            validationError = "Enter your name."
+                            validationError = "Name required."
                             return@Button
                         }
                         if (locClean.isEmpty()) {
-                            validationError = "Enter your area or city."
+                            validationError = "Area required."
                             return@Button
                         }
                         when (selectedRole) {
                             UserRole.CUSTOMER -> {
                                 val addr = if (addAddressNow) {
                                     if (houseNo.isBlank() || street.isBlank() || postalCode.trim().length < 3) {
-                                        validationError = "Fill House No, Street, and PIN Code."
+                                        validationError = "Enter House, Street, and PIN."
                                         return@Button
                                     }
                                     val cityPart = locClean.substringAfter(",", locClean).trim().ifBlank { locClean }
@@ -532,20 +549,20 @@ fun AccountSetupScreen(
                             }
                             UserRole.WORKER -> {
                                 if (shopName.trim().length < 2) {
-                                    validationError = "Enter shop name (min 2 chars)."
+                                    validationError = "Shop name too short."
                                     return@Button
                                 }
                                 if (shopAddress.trim().isEmpty()) {
-                                    validationError = "Enter shop address."
+                                    validationError = "Shop address required."
                                     return@Button
                                 }
                                 if (firstServiceName.trim().length < 2) {
-                                    validationError = "Enter your first service name."
+                                    validationError = "Service name required."
                                     return@Button
                                 }
                                 val priceMinor = ((firstServicePrice.toDoubleOrNull() ?: 0.0) * 100.0).toLong()
                                 if (priceMinor < 100L) {
-                                    validationError = "Price must be at least ₹1."
+                                    validationError = "Min price ₹1."
                                     return@Button
                                 }
                                 val shop = Shop(
@@ -573,25 +590,25 @@ fun AccountSetupScreen(
                     },
                     enabled = !isBusy,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ClickitPeach,
-                        contentColor = ClickitMidnight
+                        containerColor = ClickitBrandTeal,
+                        contentColor = Color.White
                     ),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .height(48.dp)
                         .testTag("complete_setup_button")
                 ) {
                     if (isBusy) {
                         CircularProgressIndicator(
-                            color = ClickitMidnight,
-                            strokeWidth = 2.5.dp,
-                            modifier = Modifier.size(20.dp)
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
                         )
                     } else {
                         Text(
                             text = "Continue",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
                 }

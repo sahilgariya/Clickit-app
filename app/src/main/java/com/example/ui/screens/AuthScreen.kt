@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -55,7 +54,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -91,16 +89,7 @@ fun AuthScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f),
-                        MaterialTheme.colorScheme.background,
-                        MaterialTheme.colorScheme.background
-                    )
-                )
-            )
+            .background(MaterialTheme.colorScheme.surface)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(horizontal = 24.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center
@@ -124,16 +113,12 @@ fun AuthScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    ClickitBrandLogoMark(size = 72.dp)
-                    ClickitWordmark(fontSizeSp = 32f)
+                    ClickitBrandLogoMark(size = 60.dp)
+                    ClickitWordmark(fontSizeSp = 28f)
                     Text(
-                        text = if (isCreateAccount) {
-                            "Create an account to get started"
-                        } else {
-                            "Sign in to continue"
-                        },
+                        text = if (isCreateAccount) "Create account" else "Sign in",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -142,7 +127,6 @@ fun AuthScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Compact single-row selection tags for choosing account type
                 AnimatedVisibility(
                     visible = isCreateAccount,
                     enter = fadeIn() + expandVertically(),
@@ -154,7 +138,7 @@ fun AuthScreen(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "Select account type",
+                            text = "Role",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -192,18 +176,18 @@ fun AuthScreen(
                                         Text(
                                             text = chipLabel,
                                             style = MaterialTheme.typography.labelLarge.copy(
-                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
                                             )
                                         )
                                     },
-                                    shape = CircleShape,
+                                    shape = RoundedCornerShape(8.dp),
                                     colors = FilterChipDefaults.filterChipColors(
-                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        containerColor = MaterialTheme.colorScheme.background,
                                         labelColor = MaterialTheme.colorScheme.onSurface,
                                         iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
+                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        selectedLabelColor = MaterialTheme.colorScheme.primary,
+                                        selectedLeadingIconColor = MaterialTheme.colorScheme.primary
                                     ),
                                     border = FilterChipDefaults.filterChipBorder(
                                         enabled = true,
@@ -223,8 +207,9 @@ fun AuthScreen(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         ),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f)),
+                        shape = RoundedCornerShape(8.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
@@ -255,30 +240,30 @@ fun AuthScreen(
                             scope = scope,
                             onAuthCancelled = {
                                 isLoading = false
-                                errorMessage = "Sign-in was cancelled. Tap below to continue."
+                                errorMessage = "Sign-in cancelled."
                             }
                         )
                     },
                     enabled = !isLoading,
-                    shape = CircleShape,
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(50.dp)
+                        .height(48.dp)
                         .minimumInteractiveComponentSize()
                         .testTag("google_sign_in_button")
                 ) {
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(18.dp),
                             color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.5.dp
+                            strokeWidth = 2.dp
                         )
                         Spacer(Modifier.width(10.dp))
-                        Text("Connecting...", style = MaterialTheme.typography.titleSmall)
+                        Text("Signing in...", style = MaterialTheme.typography.titleSmall)
                     } else {
                         Icon(
                             imageVector = Icons.Filled.VerifiedUser,
@@ -288,11 +273,11 @@ fun AuthScreen(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = if (isCreateAccount) {
-                                "Sign up as $roleLabel with Google"
+                                "Continue ($roleLabel)"
                             } else {
-                                "Log in with Google"
+                                "Google Sign In"
                             },
-                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold)
                         )
                     }
                 }
@@ -300,22 +285,22 @@ fun AuthScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 4.dp),
+                        .padding(vertical = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     HorizontalDivider(
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.outline
                     )
                     Text(
                         text = "OR",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     HorizontalDivider(
                         modifier = Modifier.weight(1f),
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.outline
                     )
                 }
 
@@ -325,8 +310,8 @@ fun AuthScreen(
                         errorMessage = null
                     },
                     enabled = !isLoading,
-                    shape = CircleShape,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.65f)),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -334,14 +319,13 @@ fun AuthScreen(
                         .testTag(if (isCreateAccount) "auth_mode_login" else "auth_mode_register")
                 ) {
                     Text(
-                        text = if (isCreateAccount) "Log in to existing account" else "Create new account",
+                        text = if (isCreateAccount) "Log in" else "Create account",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            // Minimal pinned bottom footer like Instagram
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -349,9 +333,9 @@ fun AuthScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Text(
-                    text = "Quick Google Sign-In • Laundry • Tailoring • Footwear Care",
+                    text = "Laundry • Tailoring • Footwear",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

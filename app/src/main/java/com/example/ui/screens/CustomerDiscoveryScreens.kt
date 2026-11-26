@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,7 +29,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCut
+import androidx.compose.material.icons.filled.LocalLaundryService
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Remove
@@ -75,14 +77,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.R
 import com.example.data.Booking
 import com.example.data.DefaultPickupSlots
 import com.example.data.FREE_DELIVERY_WEIGHT_THRESHOLD_KG
@@ -101,19 +100,20 @@ import com.example.ui.components.LoadingStateView
 import com.example.ui.components.PriceBreakdownCard
 import com.example.ui.components.SmartBatchCapacityBar
 import com.example.ui.components.TrustProtectionStrip
-import com.example.ui.theme.ClickitBurgundy
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealDark
+import com.example.ui.theme.ClickitBrandTealTint
+import com.example.ui.theme.ClickitCrimson
 import com.example.ui.theme.ClickitInfo
 import com.example.ui.theme.ClickitInfoContainer
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitLightBg
+import com.example.ui.theme.ClickitLightSurface
+import com.example.ui.theme.ClickitLightSurfaceVar
 import com.example.ui.theme.ClickitSuccess
 import com.example.ui.theme.ClickitSuccessContainer
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 import com.example.ui.theme.ClickitWarning
 import com.example.ui.theme.ClickitWarningContainer
 
@@ -183,12 +183,12 @@ fun CustomerHomeScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = onSearchChange,
-                    placeholder = { Text("Search laundry, tailoring, footwear repair...") },
+                    placeholder = { Text("Search") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Search,
                             contentDescription = "Search local service providers",
-                            tint = ClickitMutedText
+                            tint = ClickitTextSecondary
                         )
                     },
                     trailingIcon = {
@@ -197,20 +197,20 @@ fun CustomerHomeScreen(
                                 onClick = { onSearchChange("") },
                                 modifier = Modifier.testTag("home_search_clear")
                             ) {
-                                Icon(Icons.Filled.Close, contentDescription = "Clear search", tint = ClickitMutedText)
+                                Icon(Icons.Filled.Close, contentDescription = "Clear search", tint = ClickitTextSecondary)
                             }
                         }
                     },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ClickitPeach.copy(alpha = 0.7f),
-                        unfocusedBorderColor = ClickitSubtleLine,
-                        focusedTextColor = ClickitIvory,
-                        unfocusedTextColor = ClickitIvory,
-                        focusedContainerColor = ClickitSlateDeep,
-                        unfocusedContainerColor = ClickitSlateDeep
+                        focusedBorderColor = ClickitBrandTeal,
+                        unfocusedBorderColor = ClickitBorder,
+                        focusedTextColor = ClickitTextPrimary,
+                        unfocusedTextColor = ClickitTextPrimary,
+                        focusedContainerColor = ClickitLightSurface,
+                        unfocusedContainerColor = ClickitLightSurface
                     ),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("home_search_input")
@@ -222,17 +222,17 @@ fun CustomerHomeScreen(
                             selected = selectedCategory == null,
                             onClick = { onCategoryChange(null) },
                             label = { Text("All") },
-                            shape = RoundedCornerShape(50),
+                            shape = RoundedCornerShape(8.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = ClickitPeach,
-                                selectedLabelColor = ClickitMidnight,
-                                containerColor = ClickitSlateDeep,
-                                labelColor = ClickitIvory
+                                selectedContainerColor = ClickitBrandTeal,
+                                selectedLabelColor = Color.White,
+                                containerColor = ClickitLightSurface,
+                                labelColor = ClickitTextPrimary
                             ),
                             border = FilterChipDefaults.filterChipBorder(
                                 enabled = true,
                                 selected = selectedCategory == null,
-                                borderColor = ClickitSubtleLine
+                                borderColor = ClickitBorder
                             ),
                             modifier = Modifier.testTag("home_filter_all")
                         )
@@ -243,17 +243,17 @@ fun CustomerHomeScreen(
                             selected = selectedCategory == cat,
                             onClick = { onCategoryChange(if (selectedCategory == cat) null else cat) },
                             label = { Text(chipLabel) },
-                            shape = RoundedCornerShape(50),
+                            shape = RoundedCornerShape(8.dp),
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = ClickitPeach,
-                                selectedLabelColor = ClickitMidnight,
-                                containerColor = ClickitSlateDeep,
-                                labelColor = ClickitIvory
+                                selectedContainerColor = ClickitBrandTeal,
+                                selectedLabelColor = Color.White,
+                                containerColor = ClickitLightSurface,
+                                labelColor = ClickitTextPrimary
                             ),
                             border = FilterChipDefaults.filterChipBorder(
                                 enabled = true,
                                 selected = selectedCategory == cat,
-                                borderColor = ClickitSubtleLine
+                                borderColor = ClickitBorder
                             ),
                             modifier = Modifier.testTag("home_filter_${cat.key}")
                         )
@@ -264,9 +264,9 @@ fun CustomerHomeScreen(
 
         item {
             Surface(
-                color = ClickitSlateDeep,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, ClickitSubtleLine),
+                color = ClickitLightSurface,
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, ClickitBorder),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("home_address_bar")
@@ -274,7 +274,7 @@ fun CustomerHomeScreen(
                     .clickable(onClick = onManageAddressesClick)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -285,96 +285,95 @@ fun CustomerHomeScreen(
                         Box(
                             modifier = Modifier
                                 .size(34.dp)
-                                .clip(CircleShape)
-                                .background(ClickitPeach.copy(alpha = 0.14f)),
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ClickitBrandTealTint),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.LocationOn,
                                 contentDescription = "Service address",
-                                tint = ClickitPeach,
+                                tint = ClickitBrandTeal,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
                         Spacer(Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Deliver to ${defaultAddress?.label ?: "Your Area"}",
+                                text = defaultAddress?.label ?: "Address",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = ClickitIvory
+                                color = ClickitTextPrimary
                             )
                             Text(
-                                text = defaultAddress?.formattedSummary() ?: "Tap to set pickup & delivery address",
+                                text = defaultAddress?.formattedSummary() ?: "Set address",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = ClickitMutedText,
+                                color = ClickitTextSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
-                    Text("Change", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold), color = ClickitPeach)
+                    Text(
+                        text = "Change",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = ClickitBrandTeal
+                    )
                 }
             }
         }
 
         item {
-            Box(
+            Surface(
+                color = ClickitBrandTealTint,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, ClickitBrandTeal.copy(alpha = 0.2f)),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(132.dp)
-                    .clip(RoundedCornerShape(18.dp))
                     .clickable(onClick = onExploreClick)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.img_hero_home),
-                    contentDescription = "Clickit local services",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
+                Row(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.horizontalGradient(
-                                listOf(ClickitMidnight.copy(alpha = 0.92f), ClickitMidnight.copy(alpha = 0.35f))
-                            )
-                        )
-                )
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(18.dp)
-                        .fillMaxWidth(0.84f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(50)) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "FREE DELIVERY >5 KG",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                            color = ClickitBrandTealDark
+                        )
+                        Text(
+                            text = "Laundry, tailoring & footwear",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = ClickitTextPrimary
+                        )
+                    }
+                    Surface(
+                        color = ClickitBrandTeal,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
                             Text(
-                                text = "FREE DELIVERY >5 KG",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = ClickitSuccess,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                text = "Explore",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = Color.White
                             )
-                        }
-                        Surface(color = ClickitSlate.copy(alpha = 0.9f), shape = RoundedCornerShape(50)) {
-                            Text(
-                                text = "BATCH ₹2/CLOTH",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = ClickitPeachSoft,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
-                    Text(
-                        text = "Trusted local care at your door",
-                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                        color = ClickitIvory
-                    )
-                    Text(
-                        text = "OTP sealed bags • Free delivery on 5+ kg loads",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ClickitMutedText
-                    )
                 }
             }
         }
@@ -389,42 +388,56 @@ fun CustomerHomeScreen(
         }
 
         item {
-            Text("Services", style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
+            Text("Services", style = MaterialTheme.typography.titleLarge, color = ClickitTextPrimary)
             Spacer(Modifier.height(10.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(ServiceCategory.entries) { category ->
-                    val imgRes = when (category) {
-                        ServiceCategory.LAUNDRY -> R.drawable.img_cat_laundry
-                        ServiceCategory.TAILORING -> R.drawable.img_cat_tailoring
-                        ServiceCategory.FOOTWEAR -> R.drawable.img_cat_footwear
+                    val catIcon = when (category) {
+                        ServiceCategory.LAUNDRY -> Icons.Filled.LocalLaundryService
+                        ServiceCategory.TAILORING -> Icons.Filled.ContentCut
+                        ServiceCategory.FOOTWEAR -> Icons.Filled.CleaningServices
                     }
                     val isSelected = selectedCategory == category
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) ClickitSlate else ClickitSlateDeep
+                            containerColor = if (isSelected) ClickitBrandTealTint else ClickitLightSurface
                         ),
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(1.dp, if (isSelected) ClickitPeach else ClickitSubtleLine),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, if (isSelected) ClickitBrandTeal else ClickitBorder),
                         modifier = Modifier
                             .width(156.dp)
                             .testTag("category_card_${category.key}")
                             .clickable { onCategoryChange(if (isSelected) null else category) }
                     ) {
-                        Column {
-                            Image(
-                                painter = painterResource(id = imgRes),
-                                contentDescription = category.label,
-                                contentScale = ContentScale.Crop,
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(88.dp)
-                            )
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text(category.label, style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(if (isSelected) ClickitBrandTeal else ClickitLightSurfaceVar),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = catIcon,
+                                    contentDescription = category.label,
+                                    tint = if (isSelected) Color.White else ClickitBrandTeal,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 Text(
-                                    category.tagline,
+                                    text = category.label,
+                                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                                    color = ClickitTextPrimary
+                                )
+                                Text(
+                                    text = category.tagline,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = ClickitMutedText,
+                                    color = ClickitTextSecondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -445,11 +458,11 @@ fun CustomerHomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(sectionTitle, style = MaterialTheme.typography.titleLarge, color = ClickitIvory)
+                Text(sectionTitle, style = MaterialTheme.typography.titleLarge, color = ClickitTextPrimary)
                 Text(
                     text = "See all",
                     style = MaterialTheme.typography.labelLarge,
-                    color = ClickitPeach,
+                    color = ClickitBrandTeal,
                     modifier = Modifier
                         .minimumInteractiveComponentSize()
                         .clickable(onClick = onExploreClick)
@@ -458,7 +471,7 @@ fun CustomerHomeScreen(
         }
 
         when (shopsState) {
-            is UiState.Loading -> item { LoadingStateView("Finding nearby local shops...") }
+            is UiState.Loading -> item { LoadingStateView("Loading shops...") }
             is UiState.Error -> item { ErrorRetryCard(shopsState.message, onRetry = onRetry) }
             is UiState.Success -> {
                 val filteredShops = filterShops(
@@ -471,15 +484,15 @@ fun CustomerHomeScreen(
                         val hasFilters = searchQuery.isNotBlank() || selectedCategory != null
                         EmptyStateCard(
                             icon = Icons.Filled.Storefront,
-                            title = if (hasFilters) "No matching providers" else "No shops yet",
+                            title = if (hasFilters) "No results" else "No shops",
                             subtitle = if (hasFilters) {
-                                "Try clearing the search or switching categories."
+                                "Try another search or category."
                             } else {
-                                "Load verified local laundry, tailoring & footwear repair shops to get started."
+                                "Load local shops to start."
                             },
                             actionLabel = when {
-                                hasFilters -> "Reset Filters"
-                                onLoadStarterShops != null -> "Load Local Providers"
+                                hasFilters -> "Reset"
+                                onLoadStarterShops != null -> "Load Shops"
                                 else -> null
                             },
                             onAction = when {
@@ -527,25 +540,25 @@ fun CustomerExploreScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchChange,
-                placeholder = { Text("Search shop name, locality, or craft...") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                placeholder = { Text("Search") },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, tint = ClickitTextSecondary) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { onSearchChange("") }) {
-                            Icon(Icons.Filled.Close, contentDescription = "Clear search")
+                            Icon(Icons.Filled.Close, contentDescription = "Clear search", tint = ClickitTextSecondary)
                         }
                     }
                 },
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ClickitPeach.copy(alpha = 0.7f),
-                    unfocusedBorderColor = ClickitSubtleLine,
-                    focusedTextColor = ClickitIvory,
-                    unfocusedTextColor = ClickitIvory,
-                    focusedContainerColor = ClickitSlateDeep,
-                    unfocusedContainerColor = ClickitSlateDeep
+                    focusedBorderColor = ClickitBrandTeal,
+                    unfocusedBorderColor = ClickitBorder,
+                    focusedTextColor = ClickitTextPrimary,
+                    unfocusedTextColor = ClickitTextPrimary,
+                    focusedContainerColor = ClickitLightSurface,
+                    unfocusedContainerColor = ClickitLightSurface
                 ),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(10.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("explore_search_input")
@@ -557,9 +570,17 @@ fun CustomerExploreScreen(
                         selected = selectedCategory == null,
                         onClick = { onCategoryChange(null) },
                         label = { Text("All") },
+                        shape = RoundedCornerShape(8.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = ClickitPeach,
-                            selectedLabelColor = ClickitMidnight
+                            selectedContainerColor = ClickitBrandTeal,
+                            selectedLabelColor = Color.White,
+                            containerColor = ClickitLightSurface,
+                            labelColor = ClickitTextPrimary
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selectedCategory == null,
+                            borderColor = ClickitBorder
                         )
                     )
                 }
@@ -568,9 +589,17 @@ fun CustomerExploreScreen(
                         selected = selectedCategory == cat,
                         onClick = { onCategoryChange(if (selectedCategory == cat) null else cat) },
                         label = { Text(cat.label) },
+                        shape = RoundedCornerShape(8.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = ClickitPeach,
-                            selectedLabelColor = ClickitMidnight
+                            selectedContainerColor = ClickitBrandTeal,
+                            selectedLabelColor = Color.White,
+                            containerColor = ClickitLightSurface,
+                            labelColor = ClickitTextPrimary
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selectedCategory == cat,
+                            borderColor = ClickitBorder
                         )
                     )
                 }
@@ -579,9 +608,17 @@ fun CustomerExploreScreen(
                         selected = batchOnly,
                         onClick = { onBatchOnlyChange(!batchOnly) },
                         label = { Text("Smart Batch") },
+                        shape = RoundedCornerShape(8.dp),
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = ClickitInfo,
-                            selectedLabelColor = ClickitMidnight
+                            selectedContainerColor = ClickitBrandTeal,
+                            selectedLabelColor = Color.White,
+                            containerColor = ClickitLightSurface,
+                            labelColor = ClickitTextPrimary
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = batchOnly,
+                            borderColor = ClickitBorder
                         )
                     )
                 }
@@ -589,7 +626,7 @@ fun CustomerExploreScreen(
         }
 
         when (shopsState) {
-            is UiState.Loading -> LoadingStateView("Loading marketplace catalogue...")
+            is UiState.Loading -> LoadingStateView("Loading...")
             is UiState.Error -> Box(Modifier.padding(16.dp)) {
                 ErrorRetryCard(shopsState.message, onRetry = onRetry)
             }
@@ -605,15 +642,15 @@ fun CustomerExploreScreen(
                     Box(Modifier.padding(16.dp)) {
                         EmptyStateCard(
                             icon = Icons.Filled.Search,
-                            title = if (hasFilters) "No matching providers" else "No providers available yet",
+                            title = if (hasFilters) "No results" else "No shops",
                             subtitle = if (hasFilters) {
-                                "Try clearing filters or searching another neighborhood service."
+                                "Try clearing filters."
                             } else {
-                                "Load verified local laundry, tailoring & footwear repair shops."
+                                "Load local shops to start."
                             },
                             actionLabel = when {
-                                hasFilters -> "Reset Filters"
-                                onLoadStarterShops != null -> "Load Local Providers"
+                                hasFilters -> "Reset"
+                                onLoadStarterShops != null -> "Load Shops"
                                 else -> null
                             },
                             onAction = when {
@@ -632,7 +669,7 @@ fun CustomerExploreScreen(
                 } else {
                     LazyColumn(
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         items(filtered, key = { it.id }) { shop ->
                             ShopSummaryCard(shop = shop, onClick = { onShopClick(shop) })
@@ -653,15 +690,16 @@ fun ShopSummaryCard(
     val loadRatio = (shop.activeLoad.toFloat() / shop.dailyCapacity.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)
     val isBusyToday = loadRatio >= 0.8f
     Card(
-        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-        border = BorderStroke(1.dp, ClickitSubtleLine),
-        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, ClickitBorder),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier
             .fillMaxWidth()
             .testTag("shop_card_${shop.id}")
             .clickable(onClick = onClick)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -675,61 +713,47 @@ fun ShopSummaryCard(
                             Icons.Filled.Verified,
                             contentDescription = "Verified Shop",
                             tint = ClickitSuccess,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                     }
                     Text(
                         text = when {
                             !shop.openStatus -> "Paused"
-                            isBusyToday -> "Busy Today"
-                            else -> "Ready • Fast Slot"
+                            isBusyToday -> "Busy"
+                            else -> "Open"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = when {
-                            !shop.openStatus -> ClickitPeachSoft
+                            !shop.openStatus -> ClickitCrimson
                             isBusyToday -> ClickitWarning
                             else -> ClickitSuccess
                         }
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Star, contentDescription = null, tint = ClickitPeach, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Filled.Star, contentDescription = null, tint = ClickitWarning, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(3.dp))
                     Text(
                         text = "${shop.ratingAvg} (${shop.ratingCount})",
                         style = MaterialTheme.typography.labelMedium,
-                        color = ClickitIvory
+                        color = ClickitTextPrimary
                     )
                 }
             }
 
-            Text(shop.shopName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold), color = ClickitIvory)
+            Text(
+                text = shop.shopName,
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = ClickitTextPrimary
+            )
 
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                if (shop.supportsClickitBatch || shop.supportsWorkerDelivery) {
-                    Surface(color = ClickitSuccessContainer, shape = RoundedCornerShape(8.dp)) {
-                        Text(
-                            text = "Free delivery >5 kg",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ClickitSuccess,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-                }
-                if (shop.verified) {
-                    Surface(color = ClickitSlate, shape = RoundedCornerShape(8.dp)) {
-                        Text(
-                            text = "QR Tagged • Area Rider",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ClickitInfo,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-                }
+            if (shop.supportsClickitBatch || shop.supportsWorkerDelivery) {
+                Text(
+                    text = "Free delivery >5 kg",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ClickitSuccess
+                )
             }
 
             Row(
@@ -738,21 +762,22 @@ fun ShopSummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(shop.locality, style = MaterialTheme.typography.labelMedium, color = ClickitIvory)
+                    Text(shop.locality, style = MaterialTheme.typography.labelMedium, color = ClickitTextPrimary)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Schedule, contentDescription = null, tint = ClickitMutedText, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Filled.Schedule, contentDescription = null, tint = ClickitTextSecondary, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text = "${shop.turnaroundLabel} • From ${formatInr(shop.startingPriceMinor)}/${shop.startingPriceUnit}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = ClickitPeachSoft
+                            color = ClickitTextSecondary
                         )
                     }
                 }
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = "Open storefront",
-                    tint = ClickitPeach
+                    tint = ClickitTextSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -858,8 +883,8 @@ fun ShopBookingBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = ClickitMidnight,
-        contentColor = ClickitIvory
+        containerColor = ClickitLightSurface,
+        contentColor = ClickitTextPrimary
     ) {
         Column(
             modifier = Modifier
@@ -870,9 +895,9 @@ fun ShopBookingBottomSheet(
         ) {
             if (prefillBooking != null) {
                 Surface(
-                    color = ClickitBurgundy.copy(alpha = 0.65f),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.6f)),
+                    color = ClickitBrandTealTint,
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ClickitBrandTeal.copy(alpha = 0.35f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -883,19 +908,19 @@ fun ShopBookingBottomSheet(
                         Icon(
                             imageVector = Icons.Filled.Replay,
                             contentDescription = null,
-                            tint = ClickitPeach,
+                            tint = ClickitBrandTeal,
                             modifier = Modifier.size(18.dp)
                         )
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Re-ordering from ${prefillBooking.parcelCode}",
                                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = ClickitPeach
+                                color = ClickitBrandTeal
                             )
                             Text(
                                 text = prefillBooking.itemsSummary,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = ClickitPeachSoft,
+                                color = ClickitTextSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -912,34 +937,34 @@ fun ShopBookingBottomSheet(
                 Column(modifier = Modifier.weight(1f)) {
                     CategoryBadge(shop.category)
                     Spacer(Modifier.height(4.dp))
-                    Text(shop.shopName, style = MaterialTheme.typography.headlineSmall, color = ClickitIvory)
-                    Text("${shop.locality} • ${shop.hoursSummary}", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                    Text(shop.shopName, style = MaterialTheme.typography.headlineSmall, color = ClickitTextPrimary)
+                    Text("${shop.locality} • ${shop.hoursSummary}", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = ClickitIvory)
+                    Icon(Icons.Filled.Close, contentDescription = "Close", tint = ClickitTextPrimary)
                 }
             }
 
-            HorizontalDivider(color = ClickitSubtleLine)
+            HorizontalDivider(color = ClickitBorder)
 
-            Text("1. Service", style = MaterialTheme.typography.titleMedium, color = ClickitPeach)
+            Text("Service", style = MaterialTheme.typography.titleMedium, color = ClickitTextPrimary)
             when (servicesState) {
-                is UiState.Loading -> LoadingStateView("Loading services...")
+                is UiState.Loading -> LoadingStateView("Loading...")
                 is UiState.Error -> ErrorRetryCard(servicesState.message, onRetry = onRetry)
                 is UiState.Success -> {
                     if (services.isEmpty()) {
                         EmptyStateCard(
                             icon = Icons.Filled.Storefront,
-                            title = "No active services",
-                            subtitle = "Check back soon."
+                            title = "No services",
+                            subtitle = "Unavailable right now."
                         )
                     } else {
                         services.forEach { svc ->
                             val isSelected = selectedService?.id == svc.id
                             Surface(
-                                color = if (isSelected) ClickitBurgundy.copy(alpha = 0.55f) else ClickitSlateDeep,
-                                shape = RoundedCornerShape(14.dp),
-                                border = BorderStroke(1.dp, if (isSelected) ClickitPeach else ClickitSlate),
+                                color = if (isSelected) ClickitBrandTealTint else ClickitLightSurface,
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, if (isSelected) ClickitBrandTeal else ClickitBorder),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("service_option_${svc.id}")
@@ -958,23 +983,23 @@ fun ShopBookingBottomSheet(
                                             selectedServiceId = svc.id
                                             quantity = svc.minQty.toInt().coerceAtLeast(1)
                                         },
-                                        colors = RadioButtonDefaults.colors(selectedColor = ClickitPeach)
+                                        colors = RadioButtonDefaults.colors(selectedColor = ClickitBrandTeal)
                                     )
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(svc.name, style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                                        Text("${svc.turnaroundHours}h turnaround", style = MaterialTheme.typography.labelSmall, color = ClickitMutedText)
+                                        Text(svc.name, style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                                        Text("${svc.turnaroundHours}h turnaround", style = MaterialTheme.typography.labelSmall, color = ClickitTextSecondary)
                                     }
                                     Spacer(Modifier.width(8.dp))
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
                                             text = "${formatInr(svc.priceMinor)}/${svc.unit}",
                                             style = MaterialTheme.typography.titleSmall,
-                                            color = ClickitPeach
+                                            color = ClickitBrandTeal
                                         )
                                         Text(
                                             text = "${svc.turnaroundHours}h ETA",
                                             style = MaterialTheme.typography.labelSmall,
-                                            color = ClickitMutedText
+                                            color = ClickitTextSecondary
                                         )
                                     }
                                 }
@@ -993,27 +1018,27 @@ fun ShopBookingBottomSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Quantity (${svc.unit}s)", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                        Text("Minimum $minQty ${svc.unit}", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                        Text("Quantity (${svc.unit}s)", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                        Text("Minimum $minQty ${svc.unit}", style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = { if (quantity > minQty) quantity-- },
                             modifier = Modifier.testTag("qty_minus_button")
                         ) {
-                            Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity", tint = ClickitPeach)
+                            Icon(Icons.Filled.Remove, contentDescription = "Decrease quantity", tint = ClickitBrandTeal)
                         }
                         Text(
                             text = quantity.toString(),
                             style = MaterialTheme.typography.titleLarge,
-                            color = ClickitIvory,
+                            color = ClickitTextPrimary,
                             modifier = Modifier.padding(horizontal = 12.dp)
                         )
                         IconButton(
                             onClick = { quantity++ },
                             modifier = Modifier.testTag("qty_plus_button")
                         ) {
-                            Icon(Icons.Filled.Add, contentDescription = "Increase quantity", tint = ClickitPeach)
+                            Icon(Icons.Filled.Add, contentDescription = "Increase quantity", tint = ClickitBrandTeal)
                         }
                     }
                 }
@@ -1028,9 +1053,9 @@ fun ShopBookingBottomSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Load Weight (kg)", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                        Text("Weight (kg)", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                         Text(
-                            text = "Free delivery above 5 kg",
+                            text = "Free >5 kg",
                             style = MaterialTheme.typography.labelSmall,
                             color = ClickitSuccess
                         )
@@ -1045,6 +1070,7 @@ fun ShopBookingBottomSheet(
                             FilterChip(
                                 selected = isSelected,
                                 onClick = { weightText = preset },
+                                shape = RoundedCornerShape(8.dp),
                                 label = {
                                     Text(
                                         text = if (isFreePreset) "$preset kg • FREE" else "$preset kg",
@@ -1052,15 +1078,15 @@ fun ShopBookingBottomSheet(
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = if (isFreePreset) ClickitSuccess else ClickitPeach,
-                                    selectedLabelColor = ClickitMidnight,
-                                    containerColor = ClickitSlateDeep,
-                                    labelColor = if (isFreePreset) ClickitSuccess else ClickitIvory
+                                    selectedContainerColor = if (isFreePreset) ClickitSuccess else ClickitBrandTeal,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = ClickitLightSurface,
+                                    labelColor = if (isFreePreset) ClickitSuccess else ClickitTextPrimary
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = isSelected,
-                                    borderColor = if (isFreePreset) ClickitSuccess.copy(alpha = 0.45f) else ClickitSubtleLine
+                                    borderColor = if (isFreePreset) ClickitSuccess.copy(alpha = 0.45f) else ClickitBorder
                                 ),
                                 modifier = Modifier.testTag("weight_preset_${preset.replace(".", "_")}")
                             )
@@ -1073,30 +1099,32 @@ fun ShopBookingBottomSheet(
                             onValueChange = { weightText = it },
                             label = { Text("Weight (kg)") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .weight(0.38f)
                                 .testTag("booking_weight_input"),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ClickitPeach,
-                                unfocusedBorderColor = ClickitSubtleLine,
-                                focusedTextColor = ClickitIvory,
-                                unfocusedTextColor = ClickitIvory
+                                focusedBorderColor = ClickitBrandTeal,
+                                unfocusedBorderColor = ClickitBorder,
+                                focusedTextColor = ClickitTextPrimary,
+                                unfocusedTextColor = ClickitTextPrimary
                             )
                         )
                         OutlinedTextField(
                             value = itemNotes,
                             onValueChange = { itemNotes = it },
-                            label = { Text("Care Notes (optional)") },
-                            placeholder = { Text("Delicate wash, separate whites...") },
+                            label = { Text("Notes") },
+                            placeholder = { Text("Care notes") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .weight(0.62f)
                                 .testTag("booking_notes_input"),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ClickitPeach,
-                                unfocusedBorderColor = ClickitSubtleLine,
-                                focusedTextColor = ClickitIvory,
-                                unfocusedTextColor = ClickitIvory
+                                focusedBorderColor = ClickitBrandTeal,
+                                unfocusedBorderColor = ClickitBorder,
+                                focusedTextColor = ClickitTextPrimary,
+                                unfocusedTextColor = ClickitTextPrimary
                             )
                         )
                     }
@@ -1121,17 +1149,18 @@ fun ShopBookingBottomSheet(
                                     }
                                     itemNotes = parts.joinToString(", ")
                                 },
+                                shape = RoundedCornerShape(8.dp),
                                 label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = ClickitInfoContainer,
-                                    selectedLabelColor = ClickitInfo,
-                                    containerColor = ClickitSlateDeep,
-                                    labelColor = ClickitMutedText
+                                    selectedContainerColor = ClickitBrandTealTint,
+                                    selectedLabelColor = ClickitBrandTealDark,
+                                    containerColor = ClickitLightSurface,
+                                    labelColor = ClickitTextSecondary
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = active,
-                                    borderColor = ClickitSubtleLine
+                                    borderColor = ClickitBorder
                                 )
                             )
                         }
@@ -1142,11 +1171,11 @@ fun ShopBookingBottomSheet(
                         val remainingKg = (FREE_DELIVERY_WEIGHT_THRESHOLD_KG - parsedWeightKg).coerceAtLeast(0.0)
                         val progress = (parsedWeightKg / FREE_DELIVERY_WEIGHT_THRESHOLD_KG).toFloat().coerceIn(0f, 1f)
                         Surface(
-                            color = if (unlockedFreeDelivery) ClickitSuccessContainer else ClickitSlateDeep,
-                            shape = RoundedCornerShape(12.dp),
+                            color = if (unlockedFreeDelivery) ClickitSuccessContainer else ClickitLightBg,
+                            shape = RoundedCornerShape(10.dp),
                             border = BorderStroke(
                                 1.dp,
-                                if (unlockedFreeDelivery) ClickitSuccess.copy(alpha = 0.45f) else ClickitSubtleLine
+                                if (unlockedFreeDelivery) ClickitSuccess.copy(alpha = 0.45f) else ClickitBorder
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1163,25 +1192,25 @@ fun ShopBookingBottomSheet(
                                     Icon(
                                         imageVector = if (unlockedFreeDelivery) Icons.Filled.CheckCircle else Icons.Filled.LocalShipping,
                                         contentDescription = null,
-                                        tint = if (unlockedFreeDelivery) ClickitSuccess else ClickitPeach,
+                                        tint = if (unlockedFreeDelivery) ClickitSuccess else ClickitBrandTeal,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
                                         text = when {
-                                            unlockedFreeDelivery -> "FREE pickup & delivery unlocked (>5 kg)!"
+                                            unlockedFreeDelivery -> "Free delivery unlocked"
                                             parsedWeightKg == FREE_DELIVERY_WEIGHT_THRESHOLD_KG ->
-                                                "Add 0.1+ kg (above 5 kg) for FREE delivery"
+                                                "Add 0.1+ kg for free delivery"
                                             else ->
-                                                "Add ${"%.1f".format(remainingKg)} kg more (above 5 kg) for FREE delivery"
+                                                "Add ${"%.1f".format(remainingKg)} kg for free delivery"
                                         },
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-                                        color = if (unlockedFreeDelivery) ClickitSuccess else ClickitIvory
+                                        color = if (unlockedFreeDelivery) ClickitSuccess else ClickitTextPrimary
                                     )
                                 }
                                 LinearProgressIndicator(
                                     progress = { progress },
-                                    color = if (unlockedFreeDelivery) ClickitSuccess else ClickitPeach,
-                                    trackColor = ClickitSlate,
+                                    color = if (unlockedFreeDelivery) ClickitSuccess else ClickitBrandTeal,
+                                    trackColor = ClickitBorder,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(6.dp)
@@ -1192,13 +1221,13 @@ fun ShopBookingBottomSheet(
                     }
                 }
 
-                Text("2. Pickup & Delivery", style = MaterialTheme.typography.titleMedium, color = ClickitPeach)
+                Text("Delivery", style = MaterialTheme.typography.titleMedium, color = ClickitTextPrimary)
                 availableFulfilments.forEach { method ->
                     val selected = selectedFulfilment == method
                     Surface(
-                        color = if (selected) ClickitSlate else ClickitSlateDeep,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, if (selected) ClickitPeach else ClickitSubtleLine),
+                        color = if (selected) ClickitBrandTealTint else ClickitLightSurface,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, if (selected) ClickitBrandTeal else ClickitBorder),
                         modifier = Modifier
                             .fillMaxWidth()
                             .testTag("fulfilment_${method.key}")
@@ -1211,11 +1240,11 @@ fun ShopBookingBottomSheet(
                             RadioButton(
                                 selected = selected,
                                 onClick = { selectedFulfilment = method },
-                                colors = RadioButtonDefaults.colors(selectedColor = ClickitPeach)
+                                colors = RadioButtonDefaults.colors(selectedColor = ClickitBrandTeal)
                             )
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(method.label, style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                                Text(method.subtitle, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                                Text(method.label, style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                                Text(method.subtitle, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                             }
                         }
                     }
@@ -1225,9 +1254,9 @@ fun ShopBookingBottomSheet(
                     DefaultPickupSlots.forEachIndexed { idx, slot ->
                         val isSlotSelected = selectedSlotIndex == idx
                         Surface(
-                            color = if (isSlotSelected) ClickitSlateDeep else ClickitMidnight,
-                            shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.dp, if (isSlotSelected) ClickitPeach else ClickitSlate),
+                            color = if (isSlotSelected) ClickitBrandTealTint else ClickitLightSurface,
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, if (isSlotSelected) ClickitBrandTeal else ClickitBorder),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("slot_${slot.id}")
@@ -1239,8 +1268,8 @@ fun ShopBookingBottomSheet(
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(slot.windowLabel, style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                                    Text(slot.statusLabel, style = MaterialTheme.typography.labelSmall, color = ClickitInfo)
+                                    Text(slot.windowLabel, style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                                    Text(slot.statusLabel, style = MaterialTheme.typography.labelSmall, color = ClickitBrandTeal)
                                 }
                                 if (slot.batchEligible) {
                                     SmartBatchCapacityBar(
@@ -1262,12 +1291,12 @@ fun ShopBookingBottomSheet(
                             Checkbox(
                                 checked = batchOptIn,
                                 onCheckedChange = { batchOptIn = it },
-                                colors = CheckboxDefaults.colors(checkedColor = ClickitPeach, checkmarkColor = ClickitMidnight)
+                                colors = CheckboxDefaults.colors(checkedColor = ClickitBrandTeal, checkmarkColor = Color.White)
                             )
                             Text(
                                 text = "Smart Batch pickup (₹2/cloth)",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = ClickitIvory
+                                color = ClickitTextPrimary
                             )
                         }
                     }
@@ -1279,10 +1308,18 @@ fun ShopBookingBottomSheet(
                                     FilterChip(
                                         selected = selectedAddress?.id == addr.id,
                                         onClick = { selectedAddressId = addr.id },
+                                        shape = RoundedCornerShape(8.dp),
                                         label = { Text(addr.label) },
                                         colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = ClickitPeach,
-                                            selectedLabelColor = ClickitMidnight
+                                            selectedContainerColor = ClickitBrandTeal,
+                                            selectedLabelColor = Color.White,
+                                            containerColor = ClickitLightSurface,
+                                            labelColor = ClickitTextPrimary
+                                        ),
+                                        border = FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = selectedAddress?.id == addr.id,
+                                            borderColor = ClickitBorder
                                         )
                                     )
                                 }
@@ -1292,7 +1329,7 @@ fun ShopBookingBottomSheet(
                             Text(
                                 text = "Pickup: ${selectedAddress.label} • ${selectedAddress.locality}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = ClickitMutedText,
+                                color = ClickitTextSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -1301,18 +1338,19 @@ fun ShopBookingBottomSheet(
                 }
 
                 if (selectedFulfilment != FulfilmentMethod.SHOP_DROP && addresses.isEmpty()) {
-                    Text("Pickup Address", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                    Text("Pickup Address", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                     OutlinedTextField(
                         value = quickHouseNo,
                         onValueChange = { quickHouseNo = it },
                         label = { Text("House / Flat No *") },
                         singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth(),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = ClickitPeach,
-                            unfocusedBorderColor = ClickitSlate,
-                            focusedTextColor = ClickitIvory,
-                            unfocusedTextColor = ClickitIvory
+                            focusedBorderColor = ClickitBrandTeal,
+                            unfocusedBorderColor = ClickitBorder,
+                            focusedTextColor = ClickitTextPrimary,
+                            unfocusedTextColor = ClickitTextPrimary
                         )
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1321,12 +1359,13 @@ fun ShopBookingBottomSheet(
                             onValueChange = { quickStreet = it },
                             label = { Text("Street *") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ClickitPeach,
-                                unfocusedBorderColor = ClickitSlate,
-                                focusedTextColor = ClickitIvory,
-                                unfocusedTextColor = ClickitIvory
+                                focusedBorderColor = ClickitBrandTeal,
+                                unfocusedBorderColor = ClickitBorder,
+                                focusedTextColor = ClickitTextPrimary,
+                                unfocusedTextColor = ClickitTextPrimary
                             )
                         )
                         OutlinedTextField(
@@ -1334,23 +1373,24 @@ fun ShopBookingBottomSheet(
                             onValueChange = { quickLocality = it },
                             label = { Text("Area *") },
                             singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.weight(1f),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = ClickitPeach,
-                                unfocusedBorderColor = ClickitSlate,
-                                focusedTextColor = ClickitIvory,
-                                unfocusedTextColor = ClickitIvory
+                                focusedBorderColor = ClickitBrandTeal,
+                                unfocusedBorderColor = ClickitBorder,
+                                focusedTextColor = ClickitTextPrimary,
+                                unfocusedTextColor = ClickitTextPrimary
                             )
                         )
                     }
                 }
 
                 Surface(
-                    color = if (urgentService) ClickitWarningContainer else ClickitSlateDeep,
-                    shape = RoundedCornerShape(14.dp),
+                    color = if (urgentService) ClickitWarningContainer else ClickitLightBg,
+                    shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(
                         1.dp,
-                        if (urgentService) ClickitWarning.copy(alpha = 0.6f) else ClickitSubtleLine
+                        if (urgentService) ClickitWarning.copy(alpha = 0.5f) else ClickitBorder
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1372,19 +1412,19 @@ fun ShopBookingBottomSheet(
                             Icon(
                                 imageVector = Icons.Filled.Bolt,
                                 contentDescription = "Emergency service",
-                                tint = if (urgentService) ClickitWarning else ClickitPeach,
+                                tint = if (urgentService) ClickitWarning else ClickitBrandTeal,
                                 modifier = Modifier.size(20.dp)
                             )
                             Column {
                                 Text(
-                                    text = "Need it fast? Emergency Service (+25%)",
+                                    text = "Urgent (+25%)",
                                     style = MaterialTheme.typography.titleSmall,
-                                    color = ClickitIvory
+                                    color = ClickitTextPrimary
                                 )
                                 Text(
-                                    text = "Urgent pickup & priority turnaround • Priced upfront",
+                                    text = "Priority pickup & return",
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = ClickitMutedText
+                                    color = ClickitTextSecondary
                                 )
                             }
                         }
@@ -1392,7 +1432,7 @@ fun ShopBookingBottomSheet(
                             checked = urgentService,
                             onCheckedChange = { urgentService = it },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = ClickitMidnight,
+                                checkedThumbColor = Color.White,
                                 checkedTrackColor = ClickitWarning
                             ),
                             modifier = Modifier.testTag("urgent_service_switch")
@@ -1455,24 +1495,22 @@ fun ShopBookingBottomSheet(
                     },
                     enabled = !isBusy && shop.openStatus && hasAddressForFulfilment,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ClickitPeach,
-                        contentColor = ClickitMidnight
+                        containerColor = ClickitBrandTeal,
+                        contentColor = Color.White
                     ),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
+                        .height(48.dp)
                         .testTag("submit_booking_button")
                 ) {
                     Text(
                         text = when {
-                            !shop.openStatus -> "Shop Currently Paused"
-                            !hasAddressForFulfilment -> "Enter Pickup Address"
-                            feeQuote.isFreeDeliveryByWeight ->
-                                "Confirm • ${formatInr(feeQuote.totalMinor)} (Free Delivery)"
-                            else -> "Confirm Booking • ${formatInr(feeQuote.totalMinor)}"
+                            !shop.openStatus -> "Shop Paused"
+                            !hasAddressForFulfilment -> "Add Address"
+                            else -> "Confirm • ${formatInr(feeQuote.totalMinor)}"
                         },
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }
             }

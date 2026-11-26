@@ -60,7 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -77,17 +77,14 @@ import com.example.ui.UiState
 import com.example.ui.components.ErrorRetryCard
 import com.example.ui.components.LoadingStateView
 import com.example.ui.components.NeonIconBadge
-import com.example.ui.theme.ClickitBurgundy
+import com.example.ui.theme.ClickitBorder
+import com.example.ui.theme.ClickitBorderStrong
+import com.example.ui.theme.ClickitBrandTeal
+import com.example.ui.theme.ClickitBrandTealTint
 import com.example.ui.theme.ClickitCrimson
-import com.example.ui.theme.ClickitInfo
-import com.example.ui.theme.ClickitIvory
-import com.example.ui.theme.ClickitMidnight
-import com.example.ui.theme.ClickitMutedText
-import com.example.ui.theme.ClickitPeach
-import com.example.ui.theme.ClickitPeachSoft
-import com.example.ui.theme.ClickitSlate
-import com.example.ui.theme.ClickitSlateDeep
-import com.example.ui.theme.ClickitSubtleLine
+import com.example.ui.theme.ClickitLightSurface
+import com.example.ui.theme.ClickitTextPrimary
+import com.example.ui.theme.ClickitTextSecondary
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -115,16 +112,10 @@ fun UserProfileAvatar(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(
-                Brush.radialGradient(
-                    listOf(ClickitBurgundy.copy(alpha = 0.65f), ClickitSlateDeep, ClickitMidnight)
-                )
-            )
+            .background(ClickitBrandTealTint)
             .border(
-                width = 2.dp,
-                brush = Brush.linearGradient(
-                    listOf(ClickitPeach, ClickitCrimson.copy(alpha = 0.85f), ClickitInfo.copy(alpha = 0.7f))
-                ),
+                width = 1.dp,
+                color = ClickitBorderStrong,
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -158,7 +149,7 @@ fun UserProfileAvatar(
                 Text(
                     text = initials,
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = ClickitPeach
+                    color = ClickitBrandTeal
                 )
             }
         }
@@ -221,18 +212,18 @@ fun ProfileAndSupportScreen(
 
         val currentDisplayPhoto = if (clearPhoto) "" else profile.photoUrl.ifBlank { fallbackPhoto }
         val fieldColors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = ClickitPeach,
-            unfocusedBorderColor = ClickitSlate,
-            focusedTextColor = ClickitIvory,
-            unfocusedTextColor = ClickitIvory,
-            focusedLabelColor = ClickitPeach,
-            unfocusedLabelColor = ClickitMutedText
+            focusedBorderColor = ClickitBrandTeal,
+            unfocusedBorderColor = ClickitBorder,
+            focusedTextColor = ClickitTextPrimary,
+            unfocusedTextColor = ClickitTextPrimary,
+            focusedLabelColor = ClickitBrandTeal,
+            unfocusedLabelColor = ClickitTextSecondary
         )
 
         AlertDialog(
             onDismissRequest = { if (!isBusy) showEditProfileDialog = false },
-            containerColor = ClickitSlateDeep,
-            title = { Text("Edit Profile", color = ClickitIvory) },
+            containerColor = ClickitLightSurface,
+            title = { Text("Edit Profile", color = ClickitTextPrimary) },
             text = {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -253,14 +244,15 @@ fun ProfileAndSupportScreen(
                                 )
                             },
                             enabled = !isBusy,
-                            border = BorderStroke(1.dp, ClickitPeach),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, ClickitBorderStrong),
                             modifier = Modifier
                                 .minimumInteractiveComponentSize()
                                 .testTag("dialog_pick_photo_button")
                         ) {
-                            Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = ClickitPeach, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Filled.CameraAlt, contentDescription = null, tint = ClickitBrandTeal, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Change Photo", color = ClickitPeach)
+                            Text("Photo", color = ClickitBrandTeal)
                         }
                         if (pendingPhotoUri != null || currentDisplayPhoto.isNotBlank()) {
                             TextButton(
@@ -271,7 +263,7 @@ fun ProfileAndSupportScreen(
                                 enabled = !isBusy,
                                 modifier = Modifier.minimumInteractiveComponentSize()
                             ) {
-                                Text("Remove", color = ClickitPeachSoft)
+                                Text("Remove", color = ClickitCrimson)
                             }
                         }
                     }
@@ -282,8 +274,9 @@ fun ProfileAndSupportScreen(
                             name = it
                             validationError = null
                         },
-                        label = { Text("Display Name *") },
+                        label = { Text("Name *") },
                         singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
                         colors = fieldColors,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -295,16 +288,18 @@ fun ProfileAndSupportScreen(
                             locality = it
                             validationError = null
                         },
-                        label = { Text("Area / City *") },
+                        label = { Text("Area *") },
                         singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
                         colors = fieldColors,
                         modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("Phone (optional)") },
+                        label = { Text("Phone") },
                         singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
                         colors = fieldColors,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -313,7 +308,7 @@ fun ProfileAndSupportScreen(
                         Text(
                             text = validationError!!,
                             style = MaterialTheme.typography.bodySmall,
-                            color = ClickitPeachSoft,
+                            color = ClickitCrimson,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -323,9 +318,9 @@ fun ProfileAndSupportScreen(
                 Button(
                     onClick = {
                         when {
-                            name.trim().isEmpty() -> validationError = "Enter your display name."
-                            name.trim().length > 60 -> validationError = "Name must be 60 characters or fewer."
-                            locality.trim().isEmpty() -> validationError = "Enter your area or city."
+                            name.trim().isEmpty() -> validationError = "Name required."
+                            name.trim().length > 60 -> validationError = "Max 60 characters."
+                            locality.trim().isEmpty() -> validationError = "Area required."
                             else -> onSaveProfile(
                                 name.trim(),
                                 locality.trim(),
@@ -336,12 +331,13 @@ fun ProfileAndSupportScreen(
                         }
                     },
                     enabled = !isBusy,
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White),
                     modifier = Modifier.testTag("save_profile_button")
                 ) {
                     if (isBusy) {
                         CircularProgressIndicator(
-                            color = ClickitMidnight,
+                            color = Color.White,
                             strokeWidth = 2.dp,
                             modifier = Modifier.size(16.dp)
                         )
@@ -355,7 +351,7 @@ fun ProfileAndSupportScreen(
                     onClick = { showEditProfileDialog = false },
                     enabled = !isBusy
                 ) {
-                    Text("Cancel", color = ClickitIvory)
+                    Text("Cancel", color = ClickitTextSecondary)
                 }
             }
         )
@@ -373,19 +369,19 @@ fun ProfileAndSupportScreen(
         var instructions by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showAddressDialog = false },
-            containerColor = ClickitSlateDeep,
-            title = { Text("Add Address", color = ClickitIvory) },
+            containerColor = ClickitLightSurface,
+            title = { Text("Add Address", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label (Home/Work) *") }, singleLine = true)
-                    OutlinedTextField(value = houseNo, onValueChange = { houseNo = it }, label = { Text("House / Flat No *") }, singleLine = true)
-                    OutlinedTextField(value = street, onValueChange = { street = it }, label = { Text("Street / Road *") }, singleLine = true)
-                    OutlinedTextField(value = locality, onValueChange = { locality = it }, label = { Text("Locality *") }, singleLine = true)
+                    OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Label *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = houseNo, onValueChange = { houseNo = it }, label = { Text("House / Flat *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = street, onValueChange = { street = it }, label = { Text("Street *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = locality, onValueChange = { locality = it }, label = { Text("Locality *") }, singleLine = true, shape = RoundedCornerShape(10.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("City *") }, singleLine = true, modifier = Modifier.weight(1f))
-                        OutlinedTextField(value = postal, onValueChange = { postal = it }, label = { Text("PIN *") }, singleLine = true, modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("City *") }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
+                        OutlinedTextField(value = postal, onValueChange = { postal = it }, label = { Text("PIN *") }, singleLine = true, shape = RoundedCornerShape(10.dp), modifier = Modifier.weight(1f))
                     }
-                    OutlinedTextField(value = instructions, onValueChange = { instructions = it }, label = { Text("Instructions") })
+                    OutlinedTextField(value = instructions, onValueChange = { instructions = it }, label = { Text("Instructions") }, shape = RoundedCornerShape(10.dp))
                 }
             },
             confirmButton = {
@@ -404,11 +400,12 @@ fun ProfileAndSupportScreen(
                             )
                         ) { showAddressDialog = false }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight)
-                ) { Text("Save Address") }
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
+                ) { Text("Save") }
             },
             dismissButton = {
-                TextButton(onClick = { showAddressDialog = false }) { Text("Cancel", color = ClickitIvory) }
+                TextButton(onClick = { showAddressDialog = false }) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
@@ -419,13 +416,13 @@ fun ProfileAndSupportScreen(
         var description by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { showTicketDialog = false },
-            containerColor = ClickitSlateDeep,
-            title = { Text("Contact Clickit Support", color = ClickitIvory) },
+            containerColor = ClickitLightSurface,
+            title = { Text("Support", color = ClickitTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
-                    OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject *") })
-                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Details *") })
+                    OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject *") }, shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Details *") }, shape = RoundedCornerShape(10.dp))
                 }
             },
             confirmButton = {
@@ -434,11 +431,12 @@ fun ProfileAndSupportScreen(
                         onCreateTicket(category, subject, description)
                         showTicketDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = ClickitPeach, contentColor = ClickitMidnight)
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClickitBrandTeal, contentColor = Color.White)
                 ) { Text("Submit") }
             },
             dismissButton = {
-                TextButton(onClick = { showTicketDialog = false }) { Text("Cancel", color = ClickitIvory) }
+                TextButton(onClick = { showTicketDialog = false }) { Text("Cancel", color = ClickitTextSecondary) }
             }
         )
     }
@@ -450,7 +448,7 @@ fun ProfileAndSupportScreen(
     ) {
         item {
             when (profileState) {
-                is UiState.Loading -> LoadingStateView("Loading profile...")
+                is UiState.Loading -> LoadingStateView("Loading...")
                 is UiState.Error -> ErrorRetryCard(message = profileState.message, onRetry = onRetry)
                 is UiState.Success -> {
                     val userProfile = profileState.data
@@ -458,14 +456,15 @@ fun ProfileAndSupportScreen(
                     val displayName = userProfile?.displayName?.ifBlank { "Clickit User" } ?: "Clickit User"
 
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                        border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.35f)),
-                        shape = RoundedCornerShape(20.dp)
+                        colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        border = BorderStroke(1.dp, ClickitBorder),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(18.dp),
+                                .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
                             Row(
@@ -477,7 +476,7 @@ fun ProfileAndSupportScreen(
                                     UserProfileAvatar(
                                         displayName = displayName,
                                         photoUrl = resolvedPhoto,
-                                        size = 84.dp,
+                                        size = 80.dp,
                                         modifier = Modifier
                                             .testTag("profile_avatar")
                                             .clickable(enabled = !isBusy) {
@@ -487,11 +486,11 @@ fun ProfileAndSupportScreen(
                                             }
                                     )
                                     Surface(
-                                        color = ClickitPeach,
+                                        color = ClickitBrandTeal,
                                         shape = CircleShape,
-                                        border = BorderStroke(2.dp, ClickitSlateDeep),
+                                        border = BorderStroke(2.dp, ClickitLightSurface),
                                         modifier = Modifier
-                                            .size(32.dp)
+                                            .size(30.dp)
                                             .testTag("change_profile_photo_button")
                                             .clickable(enabled = !isBusy) {
                                                 quickPhotoPicker.launch(
@@ -502,16 +501,16 @@ fun ProfileAndSupportScreen(
                                         Box(contentAlignment = Alignment.Center) {
                                             if (isBusy) {
                                                 CircularProgressIndicator(
-                                                    color = ClickitMidnight,
+                                                    color = Color.White,
                                                     strokeWidth = 2.dp,
-                                                    modifier = Modifier.size(16.dp)
+                                                    modifier = Modifier.size(14.dp)
                                                 )
                                             } else {
                                                 Icon(
                                                     imageVector = Icons.Filled.CameraAlt,
                                                     contentDescription = "Update profile picture",
-                                                    tint = ClickitMidnight,
-                                                    modifier = Modifier.size(16.dp)
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(14.dp)
                                                 )
                                             }
                                         }
@@ -525,7 +524,7 @@ fun ProfileAndSupportScreen(
                                     Text(
                                         text = displayName,
                                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = ClickitIvory,
+                                        color = ClickitTextPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -533,7 +532,7 @@ fun ProfileAndSupportScreen(
                                         Text(
                                             text = userEmail,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = ClickitMutedText,
+                                            color = ClickitTextSecondary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -543,14 +542,14 @@ fun ProfileAndSupportScreen(
                                             Icon(
                                                 imageVector = Icons.Filled.LocationOn,
                                                 contentDescription = null,
-                                                tint = ClickitPeach,
+                                                tint = ClickitBrandTeal,
                                                 modifier = Modifier.size(14.dp)
                                             )
                                             Spacer(Modifier.width(4.dp))
                                             Text(
                                                 text = userProfile!!.activeLocality,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = ClickitPeachSoft,
+                                                color = ClickitTextSecondary,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -561,14 +560,14 @@ fun ProfileAndSupportScreen(
                                             Icon(
                                                 imageVector = Icons.Filled.Phone,
                                                 contentDescription = null,
-                                                tint = ClickitMutedText,
+                                                tint = ClickitTextSecondary,
                                                 modifier = Modifier.size(13.dp)
                                             )
                                             Spacer(Modifier.width(4.dp))
                                             Text(
                                                 text = userProfile!!.phoneMasked,
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = ClickitMutedText
+                                                color = ClickitTextSecondary
                                             )
                                         }
                                     }
@@ -578,19 +577,19 @@ fun ProfileAndSupportScreen(
                             OutlinedButton(
                                 onClick = { showEditProfileDialog = true },
                                 enabled = userProfile != null && !isBusy,
-                                border = BorderStroke(1.dp, ClickitPeach.copy(alpha = 0.7f)),
-                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, ClickitBorderStrong),
+                                shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp)
                                     .testTag("edit_profile_button")
                             ) {
-                                Icon(Icons.Filled.Edit, contentDescription = null, tint = ClickitPeach, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Filled.Edit, contentDescription = null, tint = ClickitBrandTeal, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Edit Name & Photo", color = ClickitPeach)
+                                Text("Edit Profile", color = ClickitBrandTeal)
                             }
 
-                            HorizontalDivider(color = ClickitSubtleLine)
+                            HorizontalDivider(color = ClickitBorder)
 
                             Row(
                                 modifier = Modifier
@@ -603,22 +602,21 @@ fun ProfileAndSupportScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                                     NeonIconBadge(
                                         icon = Icons.Filled.SwapHoriz,
-                                        tint = ClickitPeach,
-                                        glowColor = ClickitInfo,
+                                        tint = ClickitBrandTeal,
                                         size = 38.dp,
                                         iconSize = 18.dp
                                     )
                                     Spacer(Modifier.width(10.dp))
                                     Column {
-                                        Text("Mode: ${activeRole.label}", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                                        Text("Customer • Shop • Delivery", style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                                        Text("Role", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                                        Text(activeRole.label, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                                     }
                                 }
-                                Text("Switch", style = MaterialTheme.typography.labelLarge, color = ClickitPeach)
+                                Text("Switch", style = MaterialTheme.typography.labelLarge, color = ClickitBrandTeal)
                             }
 
                             if (activeRole == UserRole.CUSTOMER && onOpenOrderHistory != null) {
-                                HorizontalDivider(color = ClickitSubtleLine)
+                                HorizontalDivider(color = ClickitBorder)
 
                                 Row(
                                     modifier = Modifier
@@ -632,26 +630,25 @@ fun ProfileAndSupportScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                                         NeonIconBadge(
                                             icon = Icons.Filled.History,
-                                            tint = ClickitPeach,
-                                            glowColor = ClickitPeach,
+                                            tint = ClickitBrandTeal,
                                             size = 38.dp,
                                             iconSize = 18.dp
                                         )
                                         Spacer(Modifier.width(10.dp))
                                         Column {
-                                            Text("Order History", style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
+                                            Text("Order History", style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
                                             Text(
                                                 text = if (completedOrderCount > 0) {
-                                                    "$completedOrderCount completed • 1-tap re-order"
+                                                    "$completedOrderCount orders"
                                                 } else {
-                                                    "Past orders & RuPay receipts"
+                                                    "Past orders & receipts"
                                                 },
                                                 style = MaterialTheme.typography.bodySmall,
-                                                color = ClickitMutedText
+                                                color = ClickitTextSecondary
                                             )
                                         }
                                     }
-                                    Text("View", style = MaterialTheme.typography.labelLarge, color = ClickitPeach)
+                                    Text("View", style = MaterialTheme.typography.labelLarge, color = ClickitBrandTeal)
                                 }
                             }
                         }
@@ -666,32 +663,34 @@ fun ProfileAndSupportScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Saved Addresses", style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
+                Text("Addresses", style = MaterialTheme.typography.titleMedium, color = ClickitTextPrimary)
                 TextButton(onClick = { showAddressDialog = true }, modifier = Modifier.testTag("add_address_button")) {
-                    Icon(Icons.Filled.Add, contentDescription = null, tint = ClickitPeach)
+                    Icon(Icons.Filled.Add, contentDescription = null, tint = ClickitBrandTeal)
                     Spacer(Modifier.width(4.dp))
-                    Text("Add", color = ClickitPeach)
+                    Text("Add", color = ClickitBrandTeal)
                 }
             }
         }
 
         items(addresses, key = { it.id }) { addr ->
             Card(
-                colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                border = BorderStroke(1.dp, if (addr.defaultAddress) ClickitPeach else ClickitSlate)
+                colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, if (addr.defaultAddress) ClickitBrandTeal else ClickitBorder)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.LocationOn, contentDescription = null, tint = ClickitPeach)
+                    Icon(Icons.Filled.LocationOn, contentDescription = null, tint = ClickitBrandTeal)
                     Spacer(Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(addr.label, style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                        Text(addr.formattedSummary(), style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                        Text(addr.label, style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                        Text(addr.formattedSummary(), style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                     }
                     IconButton(onClick = { onDeleteAddress(addr.id) }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete address", tint = ClickitPeachSoft)
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete address", tint = ClickitCrimson)
                     }
                 }
             }
@@ -703,9 +702,9 @@ fun ProfileAndSupportScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Support & Disputes", style = MaterialTheme.typography.titleMedium, color = ClickitIvory)
+                Text("Support", style = MaterialTheme.typography.titleMedium, color = ClickitTextPrimary)
                 TextButton(onClick = { showTicketDialog = true }, modifier = Modifier.testTag("new_ticket_button")) {
-                    Text("New Ticket", color = ClickitPeach)
+                    Text("New", color = ClickitBrandTeal)
                 }
             }
         }
@@ -713,23 +712,25 @@ fun ProfileAndSupportScreen(
         if (tickets.isEmpty()) {
             item {
                 Text(
-                    text = "No open support tickets.",
+                    text = "No tickets",
                     style = MaterialTheme.typography.bodySmall,
-                    color = ClickitMutedText
+                    color = ClickitTextSecondary
                 )
             }
         } else {
             items(tickets, key = { it.id }) { t ->
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = ClickitSlateDeep),
-                    border = BorderStroke(1.dp, ClickitSlate)
+                    colors = CardDefaults.cardColors(containerColor = ClickitLightSurface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, ClickitBorder)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(t.subject, style = MaterialTheme.typography.titleSmall, color = ClickitIvory)
-                            Text(t.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = ClickitPeach)
+                            Text(t.subject, style = MaterialTheme.typography.titleSmall, color = ClickitTextPrimary)
+                            Text(t.status.uppercase(), style = MaterialTheme.typography.labelSmall, color = ClickitBrandTeal)
                         }
-                        Text(t.description, style = MaterialTheme.typography.bodySmall, color = ClickitMutedText)
+                        Text(t.description, style = MaterialTheme.typography.bodySmall, color = ClickitTextSecondary)
                     }
                 }
             }
@@ -739,15 +740,16 @@ fun ProfileAndSupportScreen(
             Spacer(Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onSignOut,
-                border = BorderStroke(1.dp, ClickitCrimson),
+                shape = RoundedCornerShape(10.dp),
+                border = BorderStroke(1.dp, ClickitCrimson.copy(alpha = 0.55f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
                     .testTag("sign_out_button")
             ) {
-                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = ClickitPeachSoft)
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = ClickitCrimson)
                 Spacer(Modifier.width(8.dp))
-                Text("Sign Out", color = ClickitPeachSoft)
+                Text("Sign Out", color = ClickitCrimson)
             }
         }
     }
